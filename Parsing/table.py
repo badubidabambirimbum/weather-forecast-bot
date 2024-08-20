@@ -2,12 +2,12 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime, timedelta
-import time
 import os
 import sys
 
-current_dir = os.path.dirname(__file__)
-path_to_data = os.path.join(current_dir, "..", "data")
+# current_dir = os.path.dirname(__file__)
+current_dir = os.path.dirname(os.path.abspath(sys.executable))
+path_to_data = os.path.join(current_dir, "..", "..", "data")
 
 class table:
     """Класс для парсинга данных с GisMeteo и Yandex"""
@@ -175,12 +175,17 @@ class table:
 
     # Обновление таблицы по указанному городу и сайту
     def update(self, city, type):
-        df_new = self.create_today(city, type)
+        try:
+            df_new = self.create_today(city, type)
 
-        self.datasets[city][type] = pd.concat([self.datasets[city][type], df_new])
+            self.datasets[city][type] = pd.concat([self.datasets[city][type], df_new])
 
-        self.datasets[city][type].to_csv(os.path.join(path_to_data, f'{city}_{type}_10.csv'))
-        self.datasets[city][type].to_excel(os.path.join(path_to_data, f'{city}_{type}_10.xlsx'))
+            self.datasets[city][type].to_csv(os.path.join(path_to_data, f'{city}_{type}_10.csv'))
+            self.datasets[city][type].to_excel(os.path.join(path_to_data, f'{city}_{type}_10.xlsx'))
+            print(f"{city} {type} GOOD!")
+        except:
+            print(f"{city} {type} ERROR!")
+            raise ValueError(f"{city} {type} ERROR!")
 
 
     # Ручное добавление одного дня по указанному городу и сайту
@@ -206,17 +211,22 @@ class table:
 
     # Создание backup-а
     def backup(self):
-        csv_folder = os.path.join(current_dir, "..", "backup")
-        for city in self.datasets:
-            for type in self.datasets[city]:
-                file_name_csv = f'{city}_{type}_10.csv'
-                file_path_csv = os.path.join(csv_folder, file_name_csv)
+        try:
+            csv_folder = os.path.join(current_dir, "..", "backup")
+            for city in self.datasets:
+                for type in self.datasets[city]:
+                    file_name_csv = f'{city}_{type}_10.csv'
+                    file_path_csv = os.path.join(csv_folder, file_name_csv)
 
-                file_name_excel = f'{city}_{type}_10.xlsx'
-                file_path_excel = os.path.join(csv_folder, file_name_excel)
+                    file_name_excel = f'{city}_{type}_10.xlsx'
+                    file_path_excel = os.path.join(csv_folder, file_name_excel)
 
-                self.datasets[city][type].to_csv(file_path_csv)
-                self.datasets[city][type].to_excel(file_path_excel)
+                    self.datasets[city][type].to_csv(file_path_csv)
+                    self.datasets[city][type].to_excel(file_path_excel)
+            print("BACKUP GOOD!")
+        except:
+            print("BACKUP ERROR!")
+            raise ValueError("BACKUP ERROR!")
 
 
     # Просмотр таблицы по городу и сайту
@@ -228,4 +238,4 @@ class table:
         elif key == "all":
             return self.datasets[city][type]
         else:
-            raise KeyError
+            raise KeyError("key Error!")
