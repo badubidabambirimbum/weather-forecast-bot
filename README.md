@@ -1,4 +1,8 @@
+<div align="center">
+
 # :zap: [Telegram-bot с прогнозом погоды](https://t.me/Weather_Forecast_44_Bot) :zap:
+
+</div>
 
 ## :fire: В данном репозитории реализован проект :page_facing_up:, который включает в себя: 
 
