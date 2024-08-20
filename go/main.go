@@ -1,3 +1,4 @@
+// Программа для параллельного сбора данных
 package main
 
 import (
@@ -7,40 +8,46 @@ import (
 	"time"
 )
 
-func parsing(file string, channel chan string) {
+// Структура для хранения путей к файлам exe
+type File struct {
+	Yandex   []string
+	GisMeteo []string
+}
+
+// Функция для запуска exe файла
+func parsing(file string, channel chan []byte) {
 	cmd := exec.Command(file)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		time.Sleep(2 * time.Minute)
+		time.Sleep(5 * time.Minute) // На третий запрос в яндексе часто вылезает капча. Придется подождать
 		output, err = cmd.CombinedOutput()
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	channel <- string(output)
+	channel <- output
 }
 
 func main() {
-	Yandex := make(chan string)
-	GisMeteo := make(chan string)
+	file := File{}
+	file.Yandex = []string{"Moscow_Yandex/Moscow_Yandex.exe", "Krasnodar_Yandex/Krasnodar_Yandex.exe", "Ekaterinburg_Yandex/Ekaterinburg_Yandex.exe"}
+	file.GisMeteo = []string{"Moscow_GisMeteo/Moscow_GisMeteo.exe", "Krasnodar_GisMeteo/Krasnodar_GisMeteo.exe", "Ekaterinburg_GisMeteo/Ekaterinburg_GisMeteo.exe"}
+	n := len(file.GisMeteo)
+	Yandex := make(chan []byte)
+	GisMeteo := make(chan []byte)
 
-	go parsing("Moscow_GisMeteo/Moscow_GisMeteo.exe", GisMeteo)
-	go parsing("Moscow_Yandex/Moscow_Yandex.exe", Yandex)
+	for _, file := range file.Yandex {
+		go parsing(file, Yandex)
+	}
 
-	go parsing("Krasnodar_GisMeteo/Krasnodar_GisMeteo.exe", GisMeteo)
-	go parsing("Krasnodar_Yandex/Krasnodar_Yandex.exe", Yandex)
+	for _, file := range file.GisMeteo {
+		go parsing(file, GisMeteo)
+	}
 
-	go parsing("Ekaterinburg_GisMeteo/Ekaterinburg_GisMeteo.exe", GisMeteo)
-	go parsing("Ekaterinburg_Yandex/Ekaterinburg_Yandex.exe", Yandex)
-
-	fmt.Print(<-Yandex)
-	fmt.Print(<-GisMeteo)
-
-	fmt.Print(<-Yandex)
-	fmt.Print(<-GisMeteo)
-
-	fmt.Print(<-Yandex)
-	fmt.Print(<-GisMeteo)
+	for i := 0; i < n; i++ {
+		fmt.Print(<-GisMeteo)
+		fmt.Print(<-Yandex)
+	}
 }
