@@ -8,15 +8,15 @@ import (
 	"time"
 )
 
-// Структура для хранения путей к файлам exe
+// Структура для хранения путей к файлам py
 type File struct {
 	Yandex   []string
 	GisMeteo []string
 }
 
-// Функция для запуска exe файла
+// Функция для запуска py файла
 func parsing(file string, channel chan []byte) {
-	cmd := exec.Command(file)
+	cmd := exec.Command("python", file)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -32,8 +32,8 @@ func parsing(file string, channel chan []byte) {
 
 func main() {
 	file := File{}
-	file.Yandex = []string{"Moscow_Yandex/Moscow_Yandex.exe", "Krasnodar_Yandex/Krasnodar_Yandex.exe", "Ekaterinburg_Yandex/Ekaterinburg_Yandex.exe"}
-	file.GisMeteo = []string{"Moscow_GisMeteo/Moscow_GisMeteo.exe", "Krasnodar_GisMeteo/Krasnodar_GisMeteo.exe", "Ekaterinburg_GisMeteo/Ekaterinburg_GisMeteo.exe"}
+	file.Yandex = []string{"Moscow_Yandex.py", "Krasnodar_Yandex.py", "Ekaterinburg_Yandex.py"}
+	file.GisMeteo = []string{"Moscow_GisMeteo.py", "Krasnodar_GisMeteo.py", "Ekaterinburg_GisMeteo.py"}
 	n := len(file.GisMeteo)
 	Yandex := make(chan []byte)
 	GisMeteo := make(chan []byte)
@@ -47,7 +47,7 @@ func main() {
 	}
 
 	for i := 0; i < n; i++ {
-		fmt.Print(<-GisMeteo)
-		fmt.Print(<-Yandex)
+		fmt.Print(string(<-GisMeteo))
+		fmt.Print(string(<-Yandex))
 	}
 }

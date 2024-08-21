@@ -9,7 +9,7 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from Parsing.table import table
+from parsing.table import table
 
 HELP_COMMAND = """
 <b>/start</b> - начать работу с ботом

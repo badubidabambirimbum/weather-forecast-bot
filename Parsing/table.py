@@ -1,13 +1,11 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
-import sys
 
-# current_dir = os.path.dirname(__file__)
-current_dir = os.path.dirname(os.path.abspath(sys.executable))
-path_to_data = os.path.join(current_dir, "..", "..", "data")
+current_dir = os.path.dirname(__file__)
+path_to_data = os.path.join(current_dir, "..", "data")
 
 class table:
     """Класс для парсинга данных с GisMeteo и Yandex"""
