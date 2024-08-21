@@ -2,9 +2,13 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -12,18 +16,57 @@ import (
 type File struct {
 	Yandex   []string
 	GisMeteo []string
+	Backup   []string
+}
+
+// Функция для чтения путей из файла и распределения их по структуре File
+func readFiles(filename string) (File, error) {
+	var file File
+	var currentCategory *([]string)
+
+	files, err := os.Open(filename)
+	if err != nil {
+		return file, err
+	}
+	defer files.Close()
+
+	scanner := bufio.NewScanner(files)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "#") {
+			// Определяем текущую категорию
+			if strings.Contains(line, "Yandex") {
+				currentCategory = &file.Yandex
+			} else if strings.Contains(line, "GisMeteo") {
+				currentCategory = &file.GisMeteo
+			} else if strings.Contains(line, "Backup") {
+				currentCategory = &file.Backup
+			}
+		} else if currentCategory != nil && line != "" {
+			*currentCategory = append(*currentCategory, line)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return file, err
+	}
+
+	return file, nil
 }
 
 // Функция для запуска py файла
-func parsing(file string, channel chan []byte) {
-	cmd := exec.Command("python", file)
+func executionFiles(file string, wg *sync.WaitGroup, channel chan []byte) {
+	defer wg.Done()
 
+	cmd := exec.Command("python", file)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		log.Printf("Ошибка выполнения файла %s: %v", file, err)
 		time.Sleep(5 * time.Minute) // На третий запрос в яндексе часто вылезает капча. Придется подождать
 		output, err = cmd.CombinedOutput()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Не удалось выполнить файл %s после повторной попытки: %v", file, err)
+			return
 		}
 	}
 
@@ -31,23 +74,57 @@ func parsing(file string, channel chan []byte) {
 }
 
 func main() {
-	file := File{}
-	file.Yandex = []string{"Moscow_Yandex.py", "Krasnodar_Yandex.py", "Ekaterinburg_Yandex.py"}
-	file.GisMeteo = []string{"Moscow_GisMeteo.py", "Krasnodar_GisMeteo.py", "Ekaterinburg_GisMeteo.py"}
-	n := len(file.GisMeteo)
+	// Чтение путей из файла
+	file, err := readFiles("files.txt")
+	if err != nil {
+		log.Fatalf("Ошибка при чтении файла путей: %v", err)
+	}
+	var wg sync.WaitGroup
 	Yandex := make(chan []byte)
 	GisMeteo := make(chan []byte)
 
 	for _, file := range file.Yandex {
-		go parsing(file, Yandex)
+		wg.Add(1)
+		go executionFiles(file, &wg, Yandex)
 	}
 
 	for _, file := range file.GisMeteo {
-		go parsing(file, GisMeteo)
+		wg.Add(1)
+		go executionFiles(file, &wg, GisMeteo)
 	}
 
-	for i := 0; i < n; i++ {
-		fmt.Print(string(<-GisMeteo))
-		fmt.Print(string(<-Yandex))
+	// Горутина для закрытия каналов после завершения всех горутин
+	go func() {
+		wg.Wait()
+		close(Yandex)
+		close(GisMeteo)
+	}()
+
+	// Обработка результатов из обоих каналов
+	for {
+		select {
+		case result, ok := <-Yandex:
+			if !ok {
+				Yandex = nil
+			} else {
+				fmt.Print(string(result))
+			}
+		case result, ok := <-GisMeteo:
+			if !ok {
+				GisMeteo = nil
+			} else {
+				fmt.Print(string(result))
+			}
+		case <-time.After(5 * time.Second):
+			if Yandex == nil && GisMeteo == nil {
+				Backup := make(chan []byte)
+				wg.Add(1)
+				go executionFiles(file.Backup[0], &wg, Backup)
+				result := <-Backup
+				fmt.Print(string(result))
+				close(Backup)
+				return
+			}
+		}
 	}
 }

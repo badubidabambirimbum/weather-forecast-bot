@@ -1,0 +1,12 @@
+# Yandex
+Moscow_Yandex.py
+Krasnodar_Yandex.py
+Ekaterinburg_Yandex.py
+
+# GisMeteo
+Moscow_GisMeteo.py
+Krasnodar_GisMeteo.py
+Ekaterinburg_GisMeteo.py
+
+# Backup
+backup.py
