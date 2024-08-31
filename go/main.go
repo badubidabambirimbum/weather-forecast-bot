@@ -80,8 +80,17 @@ func main() {
 		log.Fatalf("Ошибка при чтении файла путей: %v", err)
 	}
 	var wg sync.WaitGroup
+
+	Backup := make(chan []byte)
 	Yandex := make(chan []byte)
 	GisMeteo := make(chan []byte)
+
+	// Делаем backup перед обновлением баз данных
+	wg.Add(1)
+	go executionFiles(file.Backup[0], &wg, Backup)
+	result := <-Backup
+	fmt.Printf("[%d/%d] %30s\n", 1, 1, string(result))
+	close(Backup)
 
 	for _, file := range file.Yandex {
 		wg.Add(1)
@@ -100,6 +109,8 @@ func main() {
 		close(GisMeteo)
 	}()
 
+	idx := 1
+
 	// Обработка результатов из обоих каналов
 	for {
 		select {
@@ -107,22 +118,18 @@ func main() {
 			if !ok {
 				Yandex = nil
 			} else {
-				fmt.Print(string(result))
+				fmt.Printf("[%d/%d] %30s", idx, len(file.Yandex)+len(file.GisMeteo), string(result))
+				idx++
 			}
 		case result, ok := <-GisMeteo:
 			if !ok {
 				GisMeteo = nil
 			} else {
-				fmt.Print(string(result))
+				fmt.Printf("[%d/%d] %30s", idx, len(file.Yandex)+len(file.GisMeteo), string(result))
+				idx++
 			}
 		case <-time.After(5 * time.Second):
 			if Yandex == nil && GisMeteo == nil {
-				Backup := make(chan []byte)
-				wg.Add(1)
-				go executionFiles(file.Backup[0], &wg, Backup)
-				result := <-Backup
-				fmt.Print(string(result))
-				close(Backup)
 				return
 			}
 		}
