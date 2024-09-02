@@ -23,7 +23,7 @@ class table:
         self.datasets = {
             "Moscow": {
                 "GisMeteo": pd.read_csv(os.path.join(path_to_data, 'Moscow_GisMeteo_10.csv'), sep=',',
-                                  index_col='date'),
+                                  index_col='date'), 
                 "Yandex": pd.read_csv(os.path.join(path_to_data, 'Moscow_Yandex_10.csv'), sep=',',
                                   index_col='date')},
             "Krasnodar": {

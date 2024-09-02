@@ -7,3 +7,4 @@ telegram_bot/auth_data.py
 /.ipynb_checkpoints
 /__pycache__
 neural_network
+parsing.ipynb
