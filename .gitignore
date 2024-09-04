@@ -8,3 +8,4 @@ telegram_bot/auth_data.py
 /__pycache__
 neural_network
 parsing.ipynb
+venv

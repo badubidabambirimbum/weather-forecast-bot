@@ -1,0 +1,6 @@
+python -m venv venv // Создать новое виртуальное окружение
+
+venv\Scripts\activate // Активировать это виртуальное окружение (Windows)
+source venv/bin/activate // Активировать это виртуальное окружение (macOS и Linux)
+
+pip install -r requirements.txt // Установить все зависимости из requirements.txt
