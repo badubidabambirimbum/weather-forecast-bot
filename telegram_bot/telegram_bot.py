@@ -112,9 +112,15 @@ async def weather_message(message: types.Message):
     await message.answer(text=mes_ya)
     await message.answer(text=mes_gis)
 
+
 @dp.message_handler(commands=["add"])
 async def add_mesage(message: types.Message):
-    pass
+    command, *args = message.text.split()
+
+    if args:
+        word = ' '.join(args)
+    else:
+        await message.reply("Пожалуйста, укажите слово после команды /add.")
 
 
 @dp.message_handler()
