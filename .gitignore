@@ -9,3 +9,4 @@ telegram_bot/auth_data.py
 neural_network
 parsing.ipynb
 venv
+.vscode

@@ -169,6 +169,7 @@ async def callback_message(callback: types.CallbackQuery):
                                   f"✨ {date.strftime('%Y-%m-%d')} ✨\n"
                                   f"<b>Температура</b> от <b>{str(forecast[f'night{i}'])}</b> до <b>{str(forecast[f'day{i}'])}</b>\n 🔸<b>Yandex</b> прогнозирует {WEATHER_YANDEX_SMILE[forecast[f'weather{i}']]}\n 🔹<b>GisMeteo</b> прогнозирует {WEATHER_GISMETEO_SMILE[forecast[f'weather{i}']]}\n")
         else:
+            print(forecast[f'weather{i}'])
             forecast_data += (f"\n"
                               f"✨ {date.strftime('%Y-%m-%d')} ✨\n"
                               f"<b>Температура</b> от <b>{str(forecast[f'night{i}'])}</b> до <b>{str(forecast[f'day{i}'])}</b>\n 🔸<b>Yandex</b> прогнозирует {forecast[f'weather{i}']}\n 🔹<b>GisMeteo</b> прогнозирует {forecast[f'weather{i}']}\n")
