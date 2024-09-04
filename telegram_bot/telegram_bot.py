@@ -112,6 +112,10 @@ async def weather_message(message: types.Message):
     await message.answer(text=mes_ya)
     await message.answer(text=mes_gis)
 
+@dp.message_handler(commands=["add"])
+async def add_mesage(message: types.Message):
+    pass
+
 
 @dp.message_handler()
 async def check_message(message: types.Message):
