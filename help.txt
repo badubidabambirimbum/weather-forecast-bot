@@ -1,3 +1,5 @@
+python 3.11.9
+
 python -m venv venv // Создать новое виртуальное окружение
 
 venv\Scripts\activate // Активировать это виртуальное окружение (Windows)
