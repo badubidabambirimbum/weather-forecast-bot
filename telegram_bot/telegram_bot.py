@@ -54,6 +54,10 @@ WEATHER_GISMETEO_SMILE = {'Безоблачно': "☀",
 
 SET_CITIES = {"Москва", "Екатеринбург", "Краснодар"}
 
+TRANSLATE_CITIES = {"Москва": "Moscow",
+                    "Екатеринбург": "Ekaterinburg",
+                    "Краснодар": "Krasnodar"}
+
 bot = Bot(token)
 dp = Dispatcher(bot)
 table = table()
@@ -150,35 +154,29 @@ async def callback_message(callback: types.CallbackQuery):
 
     await bot.send_message(callback.from_user.id, f'Прогноз в городе {city} на {dist} дней:')
 
-    if city == "Москва":
-        forecast = table.datasets["Moscow"]["Yandex"].iloc[-1]
-        date_forecast = table.datasets["Moscow"]["Yandex"].index[-1]
-    elif city == "Краснодар":
-        forecast = table.datasets["Krasnodar"]["Yandex"].iloc[-1]
-        date_forecast = table.datasets["Krasnodar"]["Yandex"].index[-1]
-    elif city == "Екатеринбург":
-        forecast = table.datasets["Ekaterinburg"]["Yandex"].iloc[-1]
-        date_forecast = table.datasets["Ekaterinburg"]["Yandex"].index[-1]
+    forecast_Yandex = table.datasets[TRANSLATE_CITIES[city]]["Yandex"].iloc[-1]
+    forecast_GisMeteo = table.datasets[TRANSLATE_CITIES[city]]["GisMeteo"].iloc[-1]
+    date_forecast = table.datasets[TRANSLATE_CITIES[city]]["Yandex"].index[-1]
 
     future_dates = pd.date_range(start=date_forecast, periods=10)
     forecast_data = ""
 
     for i in range(1, int(dist) + 1):
         date = future_dates[i - 1]
-        if forecast[f'weather{i}'] in WEATHER_YANDEX_SMILE and forecast[f'weather{i}'] in WEATHER_GISMETEO_SMILE:
-            if WEATHER_YANDEX_SMILE[forecast[f'weather{i}']] == WEATHER_GISMETEO_SMILE[forecast[f'weather{i}']]:
+        if forecast_Yandex[f'weather{i}'] in WEATHER_YANDEX_SMILE and forecast_GisMeteo[f'weather{i}'] in WEATHER_GISMETEO_SMILE:
+            if WEATHER_YANDEX_SMILE[forecast_Yandex[f'weather{i}']] == WEATHER_GISMETEO_SMILE[forecast_GisMeteo[f'weather{i}']]:
                 forecast_data += (f"\n"
                                   f"✨ {date.strftime('%Y-%m-%d')} ✨\n"
-                                  f"<b>Температура</b> от <b>{str(forecast[f'night{i}'])}</b> до <b>{str(forecast[f'day{i}'])}</b>\n 🔸<b>Yandex</b> и 🔹<b>GisMeteo</b> прогнозируют {WEATHER_GISMETEO_SMILE[forecast[f'weather{i}']]}\n")
+                                  f"<b>Температура</b> от <b>{str(forecast_Yandex[f'night{i}'])}</b> до <b>{str(forecast_Yandex[f'day{i}'])}</b>\n 🔸<b>Yandex</b> и 🔹<b>GisMeteo</b> прогнозируют {WEATHER_GISMETEO_SMILE[forecast_GisMeteo[f'weather{i}']]}\n")
             else:
                 forecast_data += (f"\n"
                                   f"✨ {date.strftime('%Y-%m-%d')} ✨\n"
-                                  f"<b>Температура</b> от <b>{str(forecast[f'night{i}'])}</b> до <b>{str(forecast[f'day{i}'])}</b>\n 🔸<b>Yandex</b> прогнозирует {WEATHER_YANDEX_SMILE[forecast[f'weather{i}']]}\n 🔹<b>GisMeteo</b> прогнозирует {WEATHER_GISMETEO_SMILE[forecast[f'weather{i}']]}\n")
+                                  f"<b>Температура</b> от <b>{str(forecast_Yandex[f'night{i}'])}</b> до <b>{str(forecast_Yandex[f'day{i}'])}</b>\n 🔸<b>Yandex</b> прогнозирует {WEATHER_YANDEX_SMILE[forecast_Yandex[f'weather{i}']]}\n 🔹<b>GisMeteo</b> прогнозирует {WEATHER_GISMETEO_SMILE[forecast_GisMeteo[f'weather{i}']]}\n")
         else:
-            print(forecast[f'weather{i}'])
+            print(f"Yandex: {forecast_Yandex[f'weather{i}']}, GisMeteo: {forecast_GisMeteo[f'weather{i}']}")
             forecast_data += (f"\n"
                               f"✨ {date.strftime('%Y-%m-%d')} ✨\n"
-                              f"<b>Температура</b> от <b>{str(forecast[f'night{i}'])}</b> до <b>{str(forecast[f'day{i}'])}</b>\n 🔸<b>Yandex</b> прогнозирует {forecast[f'weather{i}']}\n 🔹<b>GisMeteo</b> прогнозирует {forecast[f'weather{i}']}\n")
+                              f"<b>Температура</b> от <b>{str(forecast_Yandex[f'night{i}'])}</b> до <b>{str(forecast_Yandex[f'day{i}'])}</b>\n 🔸<b>Yandex</b> прогнозирует {forecast_Yandex[f'weather{i}']}\n 🔹<b>GisMeteo</b> прогнозирует {forecast_GisMeteo[f'weather{i}']}\n")
 
     await bot.send_message(callback.from_user.id, text=forecast_data, parse_mode='HTML')
 
