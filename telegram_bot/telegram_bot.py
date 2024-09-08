@@ -158,7 +158,7 @@ async def start_message(message: types.Message):
                                  "date": [datetime.now().strftime('%Y-%m-%d')]})
 
         all_users_id = pd.concat([all_users_id, new_user], ignore_index=True)
-        all_users_id.to_csv(f'users_data/all_users_id.csv, index=False')
+        all_users_id.to_csv(f'users_data/all_users_id.csv', index=False)
 
         print(f"Новый пользователь: {user_id}!!!")
 
@@ -230,7 +230,7 @@ async def add_message(message: types.Message):
                                          "city": [city]})
 
                 add_users_id = pd.concat([add_users_id, new_user], ignore_index=True)
-                add_users_id.to_csv(f'users_data/add_users_id.csv, index=False')
+                add_users_id.to_csv(f'users_data/add_users_id.csv', index=False)
 
                 print(f"Новая подписка на оповещение о погоде: {user_id}")
                 await message.reply("✅ Отлично!😄\n"
