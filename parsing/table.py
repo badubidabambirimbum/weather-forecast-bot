@@ -179,10 +179,8 @@ class table:
             self.datasets[city][type] = pd.concat([self.datasets[city][type], df_new])
 
             self.datasets[city][type].to_csv(os.path.join(path_to_data, f'{city}_{type}_10.csv'))
-            self.datasets[city][type].to_excel(os.path.join(path_to_data, f'{city}_{type}_10.xlsx'))
             print(f"{city} {type} GOOD!")
         except:
-            print(f"{city} {type} ERROR!")
             raise ValueError(f"{city} {type} ERROR!")
 
 
@@ -204,7 +202,6 @@ class table:
         self.datasets[city][type] = pd.concat([self.datasets[city][type], df]).sort_index()
 
         self.datasets[city][type].to_csv(os.path.join(path_to_data, f'{city}_{type}_10.csv'))
-        self.datasets[city][type].to_excel(os.path.join(path_to_data, f'{city}_{type}_10.xlsx'))
 
 
     # Создание backup-а
@@ -216,14 +213,9 @@ class table:
                     file_name_csv = f'{city}_{type}_10.csv'
                     file_path_csv = os.path.join(csv_folder, file_name_csv)
 
-                    file_name_excel = f'{city}_{type}_10.xlsx'
-                    file_path_excel = os.path.join(csv_folder, file_name_excel)
-
                     self.datasets[city][type].to_csv(file_path_csv)
-                    self.datasets[city][type].to_excel(file_path_excel)
             print("BACKUP GOOD!")
         except:
-            print("BACKUP ERROR!")
             raise ValueError("BACKUP ERROR!")
 
 
