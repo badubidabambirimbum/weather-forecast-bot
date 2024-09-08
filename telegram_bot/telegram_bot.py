@@ -240,7 +240,7 @@ async def add_message(message: types.Message):
             else:
                 await message.reply("Вы уже подписаны на оповещение о погоде❗️️")
     else:
-        await message.reply("Пожалуйста, укажите слово после команды /add - доступный город🏙")
+        await message.reply("Пожалуйста, укажите слово после команды:  '/add доступный город'")
 
 
 @dp.message_handler(commands=["remove"])
