@@ -58,11 +58,11 @@ func readFiles(filename string) (File, error) {
 func executionFiles(file string, wg *sync.WaitGroup, channel chan []byte) {
 	defer wg.Done()
 
-	cmd := exec.Command("python", file)
+	cmd := exec.Command("python3", file)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("Ошибка выполнения файла %s: %v", file, err)
-		time.Sleep(5 * time.Minute) // На третий запрос в яндексе часто вылезает капча. Придется подождать
+		time.Sleep(10 * time.Minute) // На третий запрос в яндексе часто вылезает капча. Придется подождать
 		output, err = cmd.CombinedOutput()
 		if err != nil {
 			log.Fatalf("Не удалось выполнить файл %s после повторной попытки: %v", file, err)
