@@ -6,4 +6,5 @@ venv\Scripts\activate // Активировать это виртуальное 
 source venv/bin/activate // Активировать это виртуальное окружение (macOS и Linux)
 
 pip install -r requirements_win.txt // Установить все зависимости из requirements_win.txt
-pip install -r requirements_mac.txt // Установить все зависимости из requirements_win.txt
+pip install -r requirements_mac.txt // Установить все зависимости из requirements_mac.txt
+pip install -r requirements_linux.txt // Установить все зависимости из requirements_linux.txt
