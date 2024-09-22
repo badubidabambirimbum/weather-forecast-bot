@@ -12,3 +12,4 @@ neural_network
 parsing.ipynb
 venv
 .vscode
+.DS_Store
