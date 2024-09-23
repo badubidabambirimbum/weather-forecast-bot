@@ -2,7 +2,7 @@ import time
 
 from aiogram import Bot, types, Dispatcher, executor
 from auth_data import token  # API KEY
-from auth_data import admin_id, log_id # ADMIN ID, LOG ID
+from auth_data import admin_id, log_id  # ADMIN ID, LOG ID
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from Keyboards import kb, kb_help, kb_cities, ikb_info
@@ -96,7 +96,8 @@ def create_forecast(city, dist, period):
         date = future_dates[i - 1]
         if (forecast_Yandex[f'weather{i}'] in WEATHER_YANDEX_SMILE and
                 forecast_GisMeteo[f'weather{i}'] in WEATHER_GISMETEO_SMILE):
-            if WEATHER_YANDEX_SMILE[forecast_Yandex[f'weather{i}']] == WEATHER_GISMETEO_SMILE[forecast_GisMeteo[f'weather{i}']]:
+            if WEATHER_YANDEX_SMILE[forecast_Yandex[f'weather{i}']] == WEATHER_GISMETEO_SMILE[
+                forecast_GisMeteo[f'weather{i}']]:
                 forecast_data += (f"\n"
                                   f"✨ {date.strftime('%Y-%m-%d')} ✨\n"
                                   f"<b>Температура</b> ⬇️ <b>{str(forecast_Yandex[f'night{i}'])}°</b> ⬆️ <b>{str(forecast_Yandex[f'day{i}'])}°</b>\n"
@@ -216,8 +217,27 @@ async def help_message(message: types.Message):
     await bot.send_sticker(message.from_user.id,
                            sticker="CAACAgIAAxkBAAEMj1Fmp6-tcw1DpXSWJp3yCkcgTFAy6QACshIAAmD9iUtRNBJT06z1kDUE",
                            reply_markup=ReplyKeyboardRemove())
+
+    text_help = 'Как получить прогноз? \n' \
+                '1. Введи название города🏙 \n' \
+                '2. Выбери количество дней📅 \n' \
+                '3. Готово! Наслаждайся прогнозом!😉 \n' \
+                '----------------------------------- \n' \
+                'Как узнать доступные города? \n' \
+                'Введи /cities \n' \
+                '----------------------------------- \n' \
+                'Что означают смайлики погоды? \n' \
+                'Введи /weather \n' \
+                '----------------------------------- \n' \
+                'А у вас есть возможность рассылки прогноза? \n' \
+                'Конечно! для подписки на рассылку введи +(Название города) \n' \
+                'Для отмены рассылки введи /remove \n' \
+                '----------------------------------- \n' \
+                'Информация о проекте: \n' \
+                'Введи /info'
+
     await message.reply(
-        text='Введи название города🏙 и выбери количество дней📅 для получения прогноза в этом городе на выбранный период!😉',
+        text=text_help,
         parse_mode='HTML',
         reply_markup=kb_cities)
 
