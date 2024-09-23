@@ -130,7 +130,9 @@ async def add_user(city: str, message: types.Message):
         add_users_id.to_csv(f'users_data/add_users_id.csv', index=False)
 
         print(f"Новая подписка на оповещение о погоде: {user_id}")
-        await bot.send_message(log_id, text=f"Новая подписка на оповещение о погоде: {user_id}", parse_mode='HTML')
+        await bot.send_message(chat_id=log_id,
+                               text=f"✅ Новая подписка на оповещение о погоде: {user_id}",
+                               parse_mode='HTML')
 
         await message.reply("✅ Отлично!😄\n"
                             "Каждый день в 6️⃣ утра по МСК бот🤖 будет присылать вам прогноз погоды на предстоящий день!😉")
@@ -144,6 +146,9 @@ async def scheduled_notification():
             await bot.send_message(user.id, text=create_forecast(user.city, 1, 1), parse_mode='HTML')
         except Exception as e:
             print(f"Не удалось отправить сообщение пользователю {user.id}: {e}")
+            await bot.send_message(chat_id=log_id,
+                                   text=f"❌ Не удалось отправить сообщение пользователю {user.id}: {e}",
+                                   parse_mode='HTML')
 
 
 async def update_dataset(city, type):
@@ -156,8 +161,13 @@ async def update_dataset(city, type):
         await update_dataset(city, type)
 
 
+async def backup_dataset():
+    table.backup()
+
+
 def start_scheduler_async():
     scheduler_async.add_job(scheduled_notification, 'cron', hour=7, minute=0)
+    scheduler_async.add_job(backup_dataset, 'cron', hour=4, minute=50)
     scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=0, args=["Moscow", "GisMeteo"])
     scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=1, args=["Krasnodar", "Yandex"])
     scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=2, args=["Ekaterinburg", "GisMeteo"])
@@ -188,7 +198,9 @@ async def start_message(message: types.Message):
         all_users_id.to_csv(f'users_data/all_users_id.csv', index=False)
 
         print(f"Новый пользователь: {user_id}!!!")
-        await bot.send_message(log_id, text=f"Новый пользователь: {user_id}!!!", parse_mode='HTML')
+        await bot.send_message(chat_id=log_id,
+                               text=f"🆕 Новый пользователь: {user_id}!!!",
+                               parse_mode='HTML')
 
     await bot.send_sticker(message.from_user.id,
                            sticker="CAACAgIAAxkBAAEMj01mp68a2RxE2V-27EZhT1TxljV3zQACjRAAAl_bkUp3Bt1MNp18SzUE",
@@ -257,35 +269,6 @@ async def add_Ekaterinburg(message: types.Message):
     await add_user(message.text[1:], message)
 
 
-# @dp.message_handler(commands=["add"])
-# async def add_message(message: types.Message):
-#     global add_users_id
-#     command, *args = message.text.split()
-#     if args:
-#         city = ' '.join(args)
-#         if city not in SET_CITIES:
-#             await message.reply("После команды /add должно быть одно слово - доступный город🏙")
-#         else:
-#             user_id = message.from_user.id
-#             if user_id not in add_users_id['id'].values:
-#                 new_user = pd.DataFrame({"id": [user_id],
-#                                          "date": [datetime.now().strftime('%Y-%m-%d')],
-#                                          "city": [city]})
-#
-#                 add_users_id = pd.concat([add_users_id, new_user], ignore_index=True)
-#                 add_users_id.to_csv(f'users_data/add_users_id.csv', index=False)
-#
-#                 print(f"Новая подписка на оповещение о погоде: {user_id}")
-#                 await bot.send_message(log_id, text=f"Новая подписка на оповещение о погоде: {user_id}", parse_mode='HTML')
-#
-#                 await message.reply("✅ Отлично!😄\n"
-#                                     "Каждый день в 6️⃣ утра по МСК бот🤖 будет присылать вам прогноз погоды на предстоящий день!😉")
-#             else:
-#                 await message.reply("Вы уже подписаны на оповещение о погоде❗️️")
-#     else:
-#         await message.reply("Пожалуйста, укажите слово после команды:  '/add доступный город'")
-
-
 @dp.message_handler(commands=["remove"])
 async def remove_message(message: types.Message):
     global add_users_id
@@ -299,7 +282,9 @@ async def remove_message(message: types.Message):
         add_users_id.to_csv(f'users_data/add_users_id.csv', index=False)
 
         print(f"Отписка: {user_id}")
-        await bot.send_message(log_id, text=f"Отписка: {user_id}", parse_mode='HTML')
+        await bot.send_message(chat_id=log_id,
+                               text=f"❗️ Отписка: {user_id}",
+                               parse_mode='HTML')
 
         await message.reply("Вы успешно отписались от оповещения о погоде! ✔️")
     else:
@@ -330,7 +315,7 @@ async def check_message(message: types.Message):
 async def callback_message(callback: types.CallbackQuery):
     await callback.message.delete_reply_markup()
     city, dist = callback.data.split()
-    await bot.send_message(callback.from_user.id, f'Прогноз в городе {city} на {dist} дней:')
+    await bot.send_message(callback.from_user.id, text=f'Прогноз в городе {city} на {dist} дней:')
     await bot.send_message(callback.from_user.id, text=create_forecast(city, dist, 10), parse_mode='HTML')
 
 
