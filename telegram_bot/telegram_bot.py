@@ -96,8 +96,7 @@ def create_forecast(city, dist, period):
         date = future_dates[i - 1]
         if (forecast_Yandex[f'weather{i}'] in WEATHER_YANDEX_SMILE and
                 forecast_GisMeteo[f'weather{i}'] in WEATHER_GISMETEO_SMILE):
-            if WEATHER_YANDEX_SMILE[forecast_Yandex[f'weather{i}']] == WEATHER_GISMETEO_SMILE[
-                forecast_GisMeteo[f'weather{i}']]:
+            if WEATHER_YANDEX_SMILE[forecast_Yandex[f'weather{i}']] == WEATHER_GISMETEO_SMILE[forecast_GisMeteo[f'weather{i}']]:
                 forecast_data += (f"\n"
                                   f"✨ {date.strftime('%Y-%m-%d')} ✨\n"
                                   f"<b>Температура</b> ⬇️ <b>{str(forecast_Yandex[f'night{i}'])}°</b> ⬆️ <b>{str(forecast_Yandex[f'day{i}'])}°</b>\n"
@@ -163,7 +162,13 @@ async def update_dataset(city, type):
 
 
 async def backup_dataset():
-    table.backup()
+    try:
+        table.backup()
+        await bot.send_message(log_id, text=f"{datetime.now()} BACKUP GOOD", parse_mode='HTML')
+    except Exception as e:
+        await bot.send_message(log_id, text=f"{datetime.now()} BACKUP ERROR {e}", parse_mode='HTML')
+
+
 
 
 def start_scheduler_async():
@@ -214,29 +219,31 @@ async def start_message(message: types.Message):
 
 @dp.message_handler(commands=["help"])
 async def help_message(message: types.Message):
-    await bot.send_sticker(message.from_user.id,
+    await bot.send_sticker(chat_id=message.from_user.id,
                            sticker="CAACAgIAAxkBAAEMj1Fmp6-tcw1DpXSWJp3yCkcgTFAy6QACshIAAmD9iUtRNBJT06z1kDUE",
                            reply_markup=ReplyKeyboardRemove())
 
-    text_help = 'Как получить прогноз? \n' \
-                '1. Введи название города🏙 \n' \
-                '2. Выбери количество дней📅 \n' \
-                '3. Готово! Наслаждайся прогнозом!😉 \n' \
-                '----------------------------------- \n' \
-                'Как узнать доступные города? \n' \
-                'Введи /cities \n' \
-                '----------------------------------- \n' \
-                'Что означают смайлики погоды? \n' \
-                'Введи /weather \n' \
-                '----------------------------------- \n' \
-                'А у вас есть возможность рассылки прогноза? \n' \
-                'Конечно! для подписки на рассылку введи +(Название города) \n' \
-                'Для отмены рассылки введи /remove \n' \
-                '----------------------------------- \n' \
-                'Информация о проекте: \n' \
-                'Введи /info'
+    text_help = '❓ <b>Как получить прогноз?</b> \n' \
+                '<b>1.</b> <i>Введи название города</i> 🏙 \n' \
+                '<b>2.</b> <i>Выбери количество дней</i> 📅 \n' \
+                '<b>3.</b> <i>Готово! Наслаждайся прогнозом!</i> 😉 \n' \
+                ' \n' \
+                '❓ <b>Как узнать доступные города?</b> \n' \
+                '▪️<i>Введи</i> <b>/cities</b> \n' \
+                ' \n' \
+                '❓ <b>Что означают смайлики погоды?</b> \n' \
+                '▪️<i>Введи</i> <b>/weather</b> \n' \
+                ' \n' \
+                '❓ <b>А у вас есть возможность рассылки✉️ прогноза?</b> \n' \
+                '▪️<i>Конечно! для подписки на рассылку введи</i> <b>+(Название города)</b> \n' \
+                '▪️<i>Пример: +Москва</i> \n' \
+                '▪️<i>Для отмены рассылки введи</i> <b>/remove</b> \n' \
+                ' \n' \
+                '❗️ <b>Информация о проекте:</b> \n' \
+                '▪️ <i>Введи</i> <b>/info</b>'
 
-    await message.reply(
+    await bot.send_message(
+        chat_id=message.from_user.id,
         text=text_help,
         parse_mode='HTML',
         reply_markup=kb_cities)
