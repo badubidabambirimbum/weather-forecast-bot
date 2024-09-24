@@ -13,3 +13,4 @@ neural_network
 venv
 .vscode
 .DS_Store
+output.log
