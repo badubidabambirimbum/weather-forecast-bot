@@ -154,9 +154,10 @@ async def scheduled_notification():
 async def update_dataset(city, type):
     try:
         table.update(city, type)
-        await bot.send_message(log_id, text=f"{datetime.now(), city, type} GOOD", parse_mode='HTML')
+        await bot.send_message(log_id, text=f"{datetime.now().date()}\n✅ {city} {type} GOOD", parse_mode='HTML')
     except Exception as e:
         print(f"Ошибка: {e}")
+        await bot.send_message(log_id, text=f"❌ Ошибка: {e}", parse_mode='HTML')
         await asyncio.sleep(1800)
         await update_dataset(city, type)
 
@@ -164,9 +165,9 @@ async def update_dataset(city, type):
 async def backup_dataset():
     try:
         table.backup()
-        await bot.send_message(log_id, text=f"{datetime.now()} BACKUP GOOD", parse_mode='HTML')
+        await bot.send_message(log_id, text=f"{datetime.now().date()}\nBACKUP GOOD", parse_mode='HTML')
     except Exception as e:
-        await bot.send_message(log_id, text=f"{datetime.now()} BACKUP ERROR {e}", parse_mode='HTML')
+        await bot.send_message(log_id, text=f"{datetime.now().date()}\n❌ BACKUP ERROR {e}", parse_mode='HTML')
 
 
 
