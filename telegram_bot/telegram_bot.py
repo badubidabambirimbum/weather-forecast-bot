@@ -165,7 +165,7 @@ async def update_dataset(city, type):
 async def backup_dataset():
     try:
         table.backup()
-        await bot.send_message(log_id, text=f"{datetime.now().date()}\nBACKUP GOOD", parse_mode='HTML')
+        await bot.send_message(log_id, text=f"{datetime.now().date()}\n✅ BACKUP GOOD", parse_mode='HTML')
     except Exception as e:
         await bot.send_message(log_id, text=f"{datetime.now().date()}\n❌ BACKUP ERROR {e}", parse_mode='HTML')
 
