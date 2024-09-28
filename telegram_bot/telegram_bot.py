@@ -70,6 +70,8 @@ WEATHER_GISMETEO_EXCEPTIONS = {'Малооблачно,  дождь',
 
 SET_CITIES = {"Москва", "Екатеринбург", "Краснодар"}
 
+SET_TYPES = {"GisMeteo", "Yandex"}
+
 TRANSLATE_CITIES = {"Москва": "Moscow",
                     "Екатеринбург": "Ekaterinburg",
                     "Краснодар": "Krasnodar"}
@@ -154,7 +156,7 @@ async def scheduled_notification():
 async def update_dataset(city, type):
     try:
         table.update(city, type)
-        await bot.send_message(log_id, text=f"{datetime.now().date()}\n✅ {city} {type} GOOD", parse_mode='HTML')
+        await bot.send_message(log_id, text=f"{datetime.now().date()}\n✅ {city} {type}", parse_mode='HTML')
     except Exception as e:
         print(f"Ошибка: {e}")
         await bot.send_message(log_id, text=f"❌ Ошибка: {e}", parse_mode='HTML')
@@ -165,9 +167,9 @@ async def update_dataset(city, type):
 async def backup_dataset():
     try:
         table.backup()
-        await bot.send_message(log_id, text=f"{datetime.now().date()}\n✅ BACKUP GOOD", parse_mode='HTML')
+        await bot.send_message(log_id, text=f"{datetime.now().date()}\n✅ BACKUP", parse_mode='HTML')
     except Exception as e:
-        await bot.send_message(log_id, text=f"{datetime.now().date()}\n❌ BACKUP ERROR {e}", parse_mode='HTML')
+        await bot.send_message(log_id, text=f"{datetime.now().date()}\n❌ BACKUP {e}", parse_mode='HTML')
 
 
 
