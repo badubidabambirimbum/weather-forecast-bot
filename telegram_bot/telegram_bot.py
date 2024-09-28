@@ -321,6 +321,28 @@ async def remove_message(message: types.Message):
         await message.reply("Вы не были подписаны на оповещение о погоде❗️")
 
 
+@dp.message_handler(commands=["update"])
+async def update_dataset(message: types.Message):
+    user_id = message.from_user.id
+    if user_id == admin_id:
+        text = message.text.split()
+        if len(text) == 3:
+            if text[1] in SET_CITIES and text[2] in SET_TYPES:
+                table.update(TRANSLATE_CITIES[text[1]], text[2])
+            else:
+                await bot.send_message(chat_id=message.from_user.id,
+                                       text=f'Доступные города:\n'
+                                            f'{SET_CITIES}\n'
+                                            f'Доступные типы:\n'
+                                            f'{SET_TYPES}\n')
+        else:
+            await bot.send_message(chat_id=message.from_user.id,
+                                   text=f'Формат ввода: /update city type')
+    else:
+        await bot.send_message(chat_id=message.from_user.id,
+                               text=f'Данная команда вам недоступна!')
+
+
 @dp.message_handler()
 async def check_message(message: types.Message):
     ikb = InlineKeyboardMarkup(row_width=3)
