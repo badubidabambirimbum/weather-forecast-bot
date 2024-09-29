@@ -1,5 +1,3 @@
-import time
-
 from aiogram import Bot, types, Dispatcher, executor
 from auth_data import token  # API KEY
 from auth_data import admin_id, log_id  # ADMIN ID, LOG ID
@@ -137,7 +135,7 @@ async def add_user(city: str, message: types.Message):
                                parse_mode='HTML')
 
         await message.reply("✅ Отлично!😄\n"
-                            "Каждый день в 6️⃣ утра по МСК бот🤖 будет присылать вам прогноз погоды на предстоящий день!😉")
+                            "Каждый день в 7️⃣ утра по МСК бот🤖 будет присылать вам прогноз погоды на предстоящий день!😉")
     else:
         await message.reply("Вы уже подписаны на оповещение о погоде❗️️")
 
@@ -215,9 +213,9 @@ async def start_message(message: types.Message):
                            sticker="CAACAgIAAxkBAAEMj01mp68a2RxE2V-27EZhT1TxljV3zQACjRAAAl_bkUp3Bt1MNp18SzUE",
                            reply_markup=kb_help)
     await message.answer(
-        'Привет!👋 \n'
-        'Здесь ты найдешь ближайший прогноз погоды 🌦 в интересующем тебя городе! \n'
-        'Для дополнительной информации воспользуйся командой /help')
+        f'Привет, {message.from_user.first_name}!👋 \n'
+        f'Здесь ты найдешь ближайший прогноз погоды 🌦 в интересующем тебя городе! \n'
+        f'Для дополнительной информации воспользуйся командой /help')
 
 
 @dp.message_handler(commands=["help"])
@@ -321,8 +319,9 @@ async def remove_message(message: types.Message):
         await message.reply("Вы не были подписаны на оповещение о погоде❗️")
 
 
+# ADMIN
 @dp.message_handler(commands=["update"])
-async def update_dataset(message: types.Message):
+async def update_datasets(message: types.Message):
     user_id = message.from_user.id
     if user_id == admin_id:
         text = message.text.split()
@@ -330,16 +329,32 @@ async def update_dataset(message: types.Message):
             if text[1] in SET_CITIES and text[2] in SET_TYPES:
                 table.update(TRANSLATE_CITIES[text[1]], text[2])
             else:
-                await bot.send_message(chat_id=message.from_user.id,
+                await bot.send_message(chat_id=admin_id,
                                        text=f'Доступные города:\n'
                                             f'{SET_CITIES}\n'
                                             f'Доступные типы:\n'
                                             f'{SET_TYPES}\n')
         else:
-            await bot.send_message(chat_id=message.from_user.id,
+            await bot.send_message(chat_id=admin_id,
                                    text=f'Формат ввода: /update city type')
     else:
-        await bot.send_message(chat_id=message.from_user.id,
+        await bot.send_message(chat_id=user_id,
+                               text=f'Данная команда вам недоступна!')
+
+
+# ADMIN
+@dp.message_handler(commands=["check"])
+async def check_datasets(message: types.Message):
+    user_id = message.from_user.id
+    if user_id == admin_id:
+        text = ""
+        for type in SET_TYPES:
+            for city in SET_CITIES:
+                text += f"{len(table.datasets[TRANSLATE_CITIES[city]][type])} {type} {city} \n"
+        await bot.send_message(chat_id=admin_id,
+                               text=text)
+    else:
+        await bot.send_message(chat_id=user_id,
                                text=f'Данная команда вам недоступна!')
 
 
