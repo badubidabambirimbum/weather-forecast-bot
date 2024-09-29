@@ -323,19 +323,19 @@ async def remove_message(message: types.Message):
 @dp.message_handler(commands=["update"])
 async def update_datasets(message: types.Message):
     user_id = message.from_user.id
-    if user_id == admin_id:
+    if str(user_id) == admin_id:
         text = message.text.split()
         if len(text) == 3:
             if text[1] in SET_CITIES and text[2] in SET_TYPES:
                 table.update(TRANSLATE_CITIES[text[1]], text[2])
             else:
-                await bot.send_message(chat_id=admin_id,
+                await bot.send_message(chat_id=user_id,
                                        text=f'Доступные города:\n'
                                             f'{SET_CITIES}\n'
                                             f'Доступные типы:\n'
                                             f'{SET_TYPES}\n')
         else:
-            await bot.send_message(chat_id=admin_id,
+            await bot.send_message(chat_id=user_id,
                                    text=f'Формат ввода: /update city type')
     else:
         await bot.send_message(chat_id=user_id,
@@ -346,12 +346,12 @@ async def update_datasets(message: types.Message):
 @dp.message_handler(commands=["check"])
 async def check_datasets(message: types.Message):
     user_id = message.from_user.id
-    if user_id == admin_id:
+    if str(user_id) == user_id:
         text = ""
         for type in SET_TYPES:
             for city in SET_CITIES:
                 text += f"{len(table.datasets[TRANSLATE_CITIES[city]][type])} {type} {city} \n"
-        await bot.send_message(chat_id=admin_id,
+        await bot.send_message(chat_id=user_id,
                                text=text)
     else:
         await bot.send_message(chat_id=user_id,
