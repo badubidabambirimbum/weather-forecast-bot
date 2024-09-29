@@ -346,7 +346,7 @@ async def update_datasets(message: types.Message):
 @dp.message_handler(commands=["check"])
 async def check_datasets(message: types.Message):
     user_id = message.from_user.id
-    if str(user_id) == user_id:
+    if str(user_id) == admin_id:
         text = ""
         for type in SET_TYPES:
             for city in SET_CITIES:
