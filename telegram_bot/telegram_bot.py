@@ -175,8 +175,6 @@ async def backup_dataset():
         await bot.send_message(log_id, text=f"{datetime.now().date()}\n❌ BACKUP {e}", parse_mode='HTML')
 
 
-
-
 def start_scheduler_async():
     scheduler_async.add_job(scheduled_notification, 'cron', hour=7, minute=0)
     scheduler_async.add_job(backup_dataset, 'cron', hour=4, minute=50)
