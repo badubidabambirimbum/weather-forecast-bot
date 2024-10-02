@@ -159,7 +159,12 @@ async def update_dataset(city, type):
         print(f"Ошибка: {e}")
         await bot.send_message(log_id, text=f"❌ Ошибка: {e}", parse_mode='HTML')
         await asyncio.sleep(1800)
-        await update_dataset(city, type)
+        try:
+            table.update(city, type)
+            await bot.send_message(log_id, text=f"{datetime.now().date()}\n✅ {city} {type}", parse_mode='HTML')
+        except Exception as e:
+            print(f"Ошибка: {e}")
+            await bot.send_message(log_id, text=f"❌ Ошибка: {e}", parse_mode='HTML')
 
 
 async def backup_dataset():
