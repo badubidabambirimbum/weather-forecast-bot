@@ -1,6 +1,7 @@
 from aiogram import Bot, types, Dispatcher, executor
 from auth_data import token  # API KEY
 from auth_data import admin_id, log_id  # ADMIN ID, LOG ID
+from telegram_constants import *
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from Keyboards import kb, kb_help, kb_cities, ikb_info
@@ -13,66 +14,6 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from parsing.table import table
-
-HELP_COMMAND = """
-<b>/start</b> - начать работу с ботом
-<b>/help</b> - как пользоваться ботом
-<b>/info</b> - информация о проекте
-<b>/cities</b> - доступные города
-<b>/weather</b> - обозначения погоды"""
-
-WEATHER_YANDEX_SMILE = {'Гроза': "🌩",
-                        'Ливень': "🌧",
-                        'Дождь': "💦",
-                        'Облачно с прояснениями': '⛅',
-                        'Дождь с грозой': '⛈',
-                        'Ясно': '☀',
-                        'Пасмурно': '☁',
-                        'Малооблачно': "🌤",
-                        'Небольшой дождь': "💧"}
-
-WEATHER_GISMETEO_SMILE = {'Безоблачно': "☀",
-                          'Гроза': "🌩",
-                          'Дождь': "💦",
-                          'Ливень': "🌧",
-                          'Малооблачно': "🌤",
-                          'Малооблачно, дождь': "💦",
-                          'Малооблачно,  дождь': "💦",
-                          'Малооблачно,  дождь, гроза': "⛈",
-                          'Малооблачно, дождь, гроза': "⛈",
-                          'Малооблачно, без осадков': "🌤",
-                          'Малооблачно, небольшой  дождь': "💧",
-                          'Малооблачно, небольшой  дождь, гроза': "💧⚡️",
-                          'Небольшой дождь': "💧",
-                          'Облачно с прояснениями': "⛅",
-                          'Облачно, небольшой  дождь': "🌥💧",
-                          'Облачно, дождь': "🌥💦",
-                          'Облачно,  дождь': "🌥💦",
-                          'Облачно, дождь, гроза': "🌥💦️⚡️",
-                          'Облачно, без осадков': "🌥",
-                          'Облачно, небольшой дождь': "🌥💧",
-                          'Облачно, сильный  дождь': "🌧",
-                          'Облачно, сильный дождь, гроза': "⛈",
-                          'Пасмурно': "☁",
-                          'Пасмурно, без осадков': '☁',
-                          'Пасмурно, небольшой  дождь': "☁💧",
-                          'Пасмурно,  дождь': "☁💦",
-                          'Пасмурно, дождь, гроза': "☁💦⚡️",
-                          'Пасмурно, сильный  дождь': "🌧",
-                          'Пасмурно, сильный  дождь, гроза': "⛈",
-                          'Ясно': "☀"}
-
-WEATHER_GISMETEO_EXCEPTIONS = {'Малооблачно,  дождь',
-                               'Малооблачно,  дождь, гроза',
-                               'Облачно,  дождь'}
-
-SET_CITIES = {"Москва", "Екатеринбург", "Краснодар"}
-
-SET_TYPES = {"GisMeteo", "Yandex"}
-
-TRANSLATE_CITIES = {"Москва": "Moscow",
-                    "Екатеринбург": "Ekaterinburg",
-                    "Краснодар": "Krasnodar"}
 
 bot = Bot(token)
 dp = Dispatcher(bot)
