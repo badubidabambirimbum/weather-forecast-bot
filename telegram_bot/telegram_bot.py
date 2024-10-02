@@ -289,17 +289,17 @@ async def weather_message(message: types.Message):
     await message.answer(text=mes_gis)
 
 
-@dp.message_handler(lambda message: '+Москва' == message.text)
+@dp.message_handler(lambda message: '+москва' == message.text.lower())
 async def add_Moscow(message: types.Message):
     await add_user(message.text[1:], message)
 
 
-@dp.message_handler(lambda message: '+Краснодар' == message.text)
+@dp.message_handler(lambda message: '+краснодар' == message.text.lower())
 async def add_Krasnodar(message: types.Message):
     await add_user(message.text[1:], message)
 
 
-@dp.message_handler(lambda message: '+Екатеринбург' == message.text)
+@dp.message_handler(lambda message: '+екатеринбург' == message.text.lower())
 async def add_Ekaterinburg(message: types.Message):
     await add_user(message.text[1:], message)
 
