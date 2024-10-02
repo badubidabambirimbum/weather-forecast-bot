@@ -190,10 +190,12 @@ def start_scheduler_async():
 
 
 async def on_startup(_):
+    await bot.send_message(log_id, text=f"🤖 <b>запущен</b>!", parse_mode='HTML')
     print(f"{datetime.now()} Бот был успешно запущен!")
 
 
 async def on_shutdown(_):
+    await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
     print(f"{datetime.now()} Бот выключен!")
 
 
