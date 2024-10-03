@@ -9,7 +9,6 @@ telegram_bot/users_data
 /.ipynb_checkpoints
 __pycache__/
 parsing.ipynb
-neural_network
 venv
 .vscode
 .DS_Store
