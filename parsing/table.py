@@ -192,8 +192,8 @@ class table:
         data = {'date': [date]}
 
         for i in range(10):
-            data[f'day{i + 1}'] = list_days[i]
-            data[f'night{i + 1}'] = list_nights[i]
+            data[f'day{i + 1}'] = int(list_days[i])
+            data[f'night{i + 1}'] = int(list_nights[i])
             data[f'weather{i + 1}'] = list_weathers[i]
 
         df = pd.DataFrame(data)

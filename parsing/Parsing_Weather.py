@@ -267,6 +267,7 @@ def on_click_OK():
                 city = "Ekaterinburg"
 
             table.create_new_day(city, type, Year, Month, Day, list_days, list_nights, list_weathers)
+            Add_Day_window.close()
         except:
             msg_error_()
 
