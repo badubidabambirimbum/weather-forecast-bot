@@ -120,11 +120,11 @@ def start_scheduler_async():
     scheduler_async.add_job(scheduled_notification, 'cron', hour=7, minute=0)
     scheduler_async.add_job(backup_dataset, 'cron', hour=4, minute=50)
     scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=0, args=["Moscow", "GisMeteo"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=1, args=["Krasnodar", "Yandex"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=2, args=["Ekaterinburg", "GisMeteo"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=3, args=["Moscow", "Yandex"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=4, args=["Krasnodar", "GisMeteo"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=5, args=["Ekaterinburg", "Yandex"])
+    scheduler_async.add_job(update_dataset, 'cron', hour=4, minute=57, args=["Krasnodar", "Yandex"])
+    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=19, args=["Ekaterinburg", "GisMeteo"])
+    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=27, args=["Moscow", "Yandex"])
+    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=21, args=["Krasnodar", "GisMeteo"])
+    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=51, args=["Ekaterinburg", "Yandex"])
     scheduler_async.start()
 
 
