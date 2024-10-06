@@ -6,6 +6,9 @@ from PyQt5 import QtWidgets
 import sys
 from pandasModel import pandasModel
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from telegram_bot.telegram_constants import *
+
 
 def msg_error_():
     msg_error = QMessageBox()
@@ -59,6 +62,13 @@ def msg_good_backup():
     msg_error = QMessageBox()
     msg_error.setWindowTitle("GOOD!")
     msg_error.setText("backup Сделан!")
+    msg_error.setIcon(QMessageBox.Information)
+    msg_error.exec_()
+
+def msg_good_add_day():
+    msg_error = QMessageBox()
+    msg_error.setWindowTitle("GOOD!")
+    msg_error.setText("День добавлен!")
     msg_error.setIcon(QMessageBox.Information)
     msg_error.exec_()
 
@@ -267,6 +277,7 @@ def on_click_OK():
                 city = "Ekaterinburg"
 
             table.create_new_day(city, type, Year, Month, Day, list_days, list_nights, list_weathers)
+            msg_good_add_day()
             Add_Day_window.close()
         except:
             msg_error_()
@@ -287,8 +298,8 @@ def on_click_rd_2_Yandex():
 if __name__ == "__main__":
     table = table()
 
-    WEATHERS_GISMETEO = list(sorted(table.datasets["Moscow"]["GisMeteo"]['weather1'].unique()))
-    WEATHERS_YANDEX = list(sorted(table.datasets["Moscow"]["Yandex"]['weather1'].unique()))
+    WEATHERS_GISMETEO = WEATHER_GISMETEO_SMILE.keys()
+    WEATHERS_YANDEX = WEATHER_YANDEX_SMILE.keys()
 
     app = QtWidgets.QApplication(sys.argv)
 
