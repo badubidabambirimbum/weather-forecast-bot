@@ -55,7 +55,6 @@ class table:
         temp_max = soup.find_all('div', class_='temp forecast-briefly__temp forecast-briefly__temp_day')
         temp_min = soup.find_all('div', class_='temp forecast-briefly__temp forecast-briefly__temp_night')
         weather = soup.find_all('div', class_='forecast-briefly__condition')
-        print(temp_max)
 
         forecast_data = []
 
@@ -69,7 +68,7 @@ class table:
                 'min_temp': min_temp,
                 'weather': weather_today
             })
-        print(f"1: {forecast_data}")
+
         return forecast_data
 
 
@@ -151,8 +150,6 @@ class table:
         else:
             raise "TypeError"
 
-        print(f"2: {forecast_data}")
-
         max_temps = [data['max_temp'] for data in forecast_data]
         min_temps = [data['min_temp'] for data in forecast_data]
         weather = [data['weather'] for data in forecast_data]
@@ -160,10 +157,10 @@ class table:
         data = {'date': [today]}
 
         for i in range(10):
-            data[f'day{i + 1}'] = [int(max_temps[i]) if max_temps[i][0] != '-' else int(max_temps[i]) * (-1)]
+            data[f'day{i + 1}'] = [int(max_temps[i]) if max_temps[i][0] != '−' else int(max_temps[i][1:]) * (-1)]
 
         for i in range(10):
-            data[f'night{i + 1}'] = [int(min_temps[i]) if min_temps[i][0] != '-' else int(min_temps[i]) * (-1)]
+            data[f'night{i + 1}'] = [int(min_temps[i]) if min_temps[i][0] != '−' else int(min_temps[i][1:]) * (-1)]
 
         for i in range(10):
             data[f'weather{i + 1}'] = [weather[i] if i < len(weather) else None]
@@ -178,10 +175,8 @@ class table:
     def update(self, city, type):
         try:
             df_new = self.create_today(city, type)
-            print(df_new)
 
             self.datasets[city][type] = pd.concat([self.datasets[city][type], df_new])
-            print("3")
 
             self.datasets[city][type].to_csv(os.path.join(path_to_data, f'{city}_{type}_10.csv'))
             print(f"{city} {type} GOOD!")
