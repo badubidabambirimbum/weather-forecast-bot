@@ -120,11 +120,11 @@ def start_scheduler_async():
     scheduler_async.add_job(scheduled_notification, 'cron', hour=7, minute=0)
     scheduler_async.add_job(backup_dataset, 'cron', hour=4, minute=50)
     scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=0, args=["Moscow", "GisMeteo"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=1, args=["Krasnodar", "Yandex"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=2, args=["Ekaterinburg", "GisMeteo"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=3, args=["Moscow", "Yandex"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=4, args=["Krasnodar", "GisMeteo"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=5, args=["Ekaterinburg", "Yandex"])
+    scheduler_async.add_job(update_dataset, 'cron', hour=4, minute=57, args=["Krasnodar", "Yandex"])
+    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=19, args=["Ekaterinburg", "GisMeteo"])
+    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=27, args=["Moscow", "Yandex"])
+    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=21, args=["Krasnodar", "GisMeteo"])
+    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=51, args=["Ekaterinburg", "Yandex"])
     scheduler_async.start()
 
 
@@ -145,14 +145,15 @@ async def start_message(message: types.Message):
 
     if user_id not in all_users_id['id'].values:
         new_user = pd.DataFrame({"id": [user_id],
-                                 "date": [datetime.now().strftime('%Y-%m-%d')]})
+                                 "date": [datetime.now().strftime('%Y-%m-%d')],
+                                 "username": [message.from_user.username]})
 
         all_users_id = pd.concat([all_users_id, new_user], ignore_index=True)
         all_users_id.to_csv(f'users_data/all_users_id.csv', index=False)
 
-        print(f"Новый пользователь: {user_id}!!!")
+        print(f"Новый пользователь: {message.from_user.username}!!!")
         await bot.send_message(chat_id=log_id,
-                               text=f"🆕 Новый пользователь: {user_id}!!!",
+                               text=f"🆕 Новый пользователь: {message.from_user.username}!!!",
                                parse_mode='HTML')
 
     await bot.send_sticker(message.from_user.id,
@@ -230,17 +231,17 @@ async def weather_message(message: types.Message):
 
 @dp.message_handler(lambda message: '+москва' == message.text.lower())
 async def add_Moscow(message: types.Message):
-    await add_user(message.text[1:], message)
+    await add_user(message.text[1:].lower(), message)
 
 
 @dp.message_handler(lambda message: '+краснодар' == message.text.lower())
 async def add_Krasnodar(message: types.Message):
-    await add_user(message.text[1:], message)
+    await add_user(message.text[1:].lower(), message)
 
 
 @dp.message_handler(lambda message: '+екатеринбург' == message.text.lower())
 async def add_Ekaterinburg(message: types.Message):
-    await add_user(message.text[1:], message)
+    await add_user(message.text[1:].lower(), message)
 
 
 @dp.message_handler(commands=["remove"])
@@ -255,9 +256,9 @@ async def remove_message(message: types.Message):
         add_users_id.reset_index(drop=True, inplace=True)
         add_users_id.to_csv(f'users_data/add_users_id.csv', index=False)
 
-        print(f"Отписка: {user_id}")
+        print(f"Отписка: {message.from_user.username}")
         await bot.send_message(chat_id=log_id,
-                               text=f"❗️ Отписка: {user_id}",
+                               text=f"❗️ Отписка: {message.from_user.username}",
                                parse_mode='HTML')
 
         await message.reply("Вы успешно отписались от оповещения о погоде! ✔️")

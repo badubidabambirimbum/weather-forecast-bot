@@ -157,10 +157,10 @@ class table:
         data = {'date': [today]}
 
         for i in range(10):
-            data[f'day{i + 1}'] = [int(max_temps[i]) if max_temps[i][0] != '-' else int(max_temps[i]) * (-1)]
+            data[f'day{i + 1}'] = [int(max_temps[i]) if max_temps[i][0] != '−' else int(max_temps[i][1:]) * (-1)]
 
         for i in range(10):
-            data[f'night{i + 1}'] = [int(min_temps[i]) if min_temps[i][0] != '-' else int(min_temps[i]) * (-1)]
+            data[f'night{i + 1}'] = [int(min_temps[i]) if min_temps[i][0] != '−' else int(min_temps[i][1:]) * (-1)]
 
         for i in range(10):
             data[f'weather{i + 1}'] = [weather[i] if i < len(weather) else None]
@@ -192,8 +192,8 @@ class table:
         data = {'date': [date]}
 
         for i in range(10):
-            data[f'day{i + 1}'] = list_days[i]
-            data[f'night{i + 1}'] = list_nights[i]
+            data[f'day{i + 1}'] = int(list_days[i])
+            data[f'night{i + 1}'] = int(list_nights[i])
             data[f'weather{i + 1}'] = list_weathers[i]
 
         df = pd.DataFrame(data)
