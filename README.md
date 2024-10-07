@@ -26,7 +26,7 @@
   <img src="photo/corr.png" width="800" height="470">
 </p>
 
-  - ### [telegram-bot](https://github.com/badubidabambirimbum/weather-forecast-bot/tree/main/telegram_bot) :robot: , который предоставляет прогноз погоды (пока что позаимствованный у Яндекса):
+  - ### [telegram-bot](https://github.com/badubidabambirimbum/weather-forecast-bot/tree/main/telegram_bot) :robot: , который предоставляет прогноз погоды:
 
 <p align="center">
   <img src="photo/qr-code.JPG" width="400" height="400">
