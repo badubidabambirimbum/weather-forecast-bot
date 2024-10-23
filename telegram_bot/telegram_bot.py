@@ -1,6 +1,5 @@
 from aiogram import Bot, types, Dispatcher, executor
-from auth_data import token  # API KEY
-from auth_data import admin_id, log_id  # ADMIN ID, LOG ID
+from auth_data import *  # API KEY, ADMIN ID, LOG ID, ...
 from telegram_constants import *
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -8,6 +7,7 @@ from Keyboards import kb, kb_help, kb_cities, ikb_info
 from datetime import datetime
 import pandas as pd
 import asyncio
+import pymysql
 
 import sys
 import os
@@ -19,10 +19,24 @@ bot = Bot(token)
 dp = Dispatcher(bot)
 table = table()
 
-scheduler_async = AsyncIOScheduler()
+try:
+    connection = pymysql.connect(
+        host=host,
+        port=port,
+        user=user,
+        password=password,
+        database=database,
+        cursorclass=pymysql.cursors.DictCursor
+    )
+    print('successfully connected...')
+    connect_text = f"✅ Подключение установлено!"
+except Exception as ex:
+    print("Connection refused...")
+    print(ex)
+    connect_text = f"❌ Не удалось установить подключение {ex}!"
+    sys.exit(0)
 
-all_users_id = pd.read_csv('users_data/all_users_id.csv')
-add_users_id = pd.read_csv('users_data/add_users_id.csv')
+scheduler_async = AsyncIOScheduler()
 
 
 def create_forecast(city, dist, period):
@@ -59,20 +73,24 @@ def create_forecast(city, dist, period):
 
 
 async def add_user(city: str, message: types.Message):
-    global add_users_id
 
     user_id = message.from_user.id
-    if user_id not in add_users_id['id'].values:
-        new_user = pd.DataFrame({"id": [user_id],
-                                 "date": [datetime.now().strftime('%Y-%m-%d')],
-                                 "city": [city]})
 
-        add_users_id = pd.concat([add_users_id, new_user], ignore_index=True)
-        add_users_id.to_csv(f'users_data/add_users_id.csv', index=False)
+    # Поиск индекса в таблице
+    with connection.cursor() as cursor:
+        select_sub = "SELECT id FROM subscribers WHERE id = %s;"
+        cursor.execute(select_sub, user_id)
+        rows = cursor.fetchall()
 
-        print(f"Новая подписка на оповещение о погоде: {user_id}")
+    if len(rows) == 0:
+        with connection.cursor() as cursor:
+            add_new_sub = "INSERT INTO subscribers (id_subscribers, id, date, city) VALUES (NULL, %s, %s, %s);"
+            cursor.execute(add_new_sub, (user_id, datetime.now().strftime('%Y-%m-%d'), city))
+            connection.commit()
+
+        print(f"Новая подписка на оповещение о погоде: {message.from_user.username}")
         await bot.send_message(chat_id=log_id,
-                               text=f"✅ Новая подписка на оповещение о погоде: {user_id}",
+                               text=f"✅ Новая подписка на оповещение о погоде: {message.from_user.username}",
                                parse_mode='HTML')
 
         await message.reply("✅ Отлично!😄\n"
@@ -82,30 +100,43 @@ async def add_user(city: str, message: types.Message):
 
 
 async def scheduled_notification():
-    for user in add_users_id.itertuples():
+    with connection.cursor() as cursor:
+        select_sub = f"SELECT * FROM subscribers;"
+        cursor.execute(select_sub)
+        rows = cursor.fetchall()
+    for row in rows:
         try:
-            await bot.send_message(user.id, text=create_forecast(user.city, 1, 1), parse_mode='HTML')
+            await bot.send_message(row["id"], text=create_forecast(row["city"], 1, 1), parse_mode='HTML')
         except Exception as e:
-            print(f"Не удалось отправить сообщение пользователю {user.id}: {e}")
+            print(f"Не удалось отправить сообщение пользователю {row['id']}: {e}")
             await bot.send_message(chat_id=log_id,
-                                   text=f"❌ Не удалось отправить сообщение пользователю {user.id}: {e}",
+                                   text=f"❌ Не удалось отправить сообщение пользователю {row['id']}: {e}",
                                    parse_mode='HTML')
 
 
-async def update_dataset(city, type):
-    try:
-        table.update(city, type)
-        await bot.send_message(log_id, text=f"{datetime.now().date()}\n✅ {city} {type}", parse_mode='HTML')
-    except Exception as e:
-        print(f"Ошибка: {e}")
-        await bot.send_message(log_id, text=f"❌ Ошибка: {e}", parse_mode='HTML')
-        await asyncio.sleep(1800)
+async def update_dataset(city=None, type=None):
+    if city == None and type == None:
+        log_string = f"{datetime.now().date()}\n"
+        log_count = 0
+        for city_ru in SET_CITIES:
+            for type in SET_TYPES:
+                city = TRANSLATE_CITIES[city_ru]
+                try:
+                    table.update(city, type)
+                    log_string += f"✅ {city} {type} \n"
+                    log_count += 1
+                except Exception as e:
+                    print(f"Ошибка: {e}")
+                    log_string += f"❌ {city} {type} \n"
+                await asyncio.sleep(120)
+        await bot.send_message(log_id, text=f"{log_string} {log_count} / 6", parse_mode='HTML')
+    else:
         try:
             table.update(city, type)
-            await bot.send_message(log_id, text=f"{datetime.now().date()}\n✅ {city} {type}", parse_mode='HTML')
+            await bot.send_message(log_id, text=f"✅ {city} {type}", parse_mode='HTML')
         except Exception as e:
             print(f"Ошибка: {e}")
-            await bot.send_message(log_id, text=f"❌ Ошибка: {e}", parse_mode='HTML')
+            await bot.send_message(log_id, text=f"❌ {city} {type}", parse_mode='HTML')
 
 
 async def backup_dataset():
@@ -119,37 +150,37 @@ async def backup_dataset():
 def start_scheduler_async():
     scheduler_async.add_job(scheduled_notification, 'cron', hour=7, minute=0)
     scheduler_async.add_job(backup_dataset, 'cron', hour=4, minute=50)
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=0, args=["Moscow", "GisMeteo"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=4, minute=57, args=["Krasnodar", "Yandex"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=19, args=["Ekaterinburg", "GisMeteo"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=27, args=["Moscow", "Yandex"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=21, args=["Krasnodar", "GisMeteo"])
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=51, args=["Ekaterinburg", "Yandex"])
+    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=0)
     scheduler_async.start()
 
 
 async def on_startup(_):
     await bot.send_message(log_id, text=f"🤖 <b>запущен</b>!", parse_mode='HTML')
+    await bot.send_message(chat_id=log_id, text=connect_text, parse_mode='HTML')
     print(f"{datetime.now()} Бот был успешно запущен!")
 
 
 async def on_shutdown(_):
     await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
+    connection.close()
     print(f"{datetime.now()} Бот выключен!")
 
 
 @dp.message_handler(commands=["start"])
 async def start_message(message: types.Message):
-    global all_users_id
     user_id = message.from_user.id
 
-    if user_id not in all_users_id['id'].values:
-        new_user = pd.DataFrame({"id": [user_id],
-                                 "date": [datetime.now().strftime('%Y-%m-%d')],
-                                 "username": [message.from_user.username]})
+    # Поиск индекса в таблице
+    with connection.cursor() as cursor:
+        select_sub = f"SELECT id FROM all_users WHERE id = %s;"
+        cursor.execute(select_sub, user_id)
+        rows = cursor.fetchall()
 
-        all_users_id = pd.concat([all_users_id, new_user], ignore_index=True)
-        all_users_id.to_csv(f'users_data/all_users_id.csv', index=False)
+    if len(rows) == 0:
+        with connection.cursor() as cursor:
+            add_new_user = "INSERT INTO all_users (id_users, id, username, date) VALUES (NULL, %s, %s, %s);"
+            cursor.execute(add_new_user, (user_id, message.from_user.username, datetime.now().strftime('%Y-%m-%d')))
+            connection.commit()
 
         print(f"Новый пользователь: {message.from_user.username}!!!")
         await bot.send_message(chat_id=log_id,
@@ -231,30 +262,34 @@ async def weather_message(message: types.Message):
 
 @dp.message_handler(lambda message: '+москва' == message.text.lower())
 async def add_Moscow(message: types.Message):
-    await add_user(message.text[1:].lower(), message)
+    await add_user(message.text[1:].capitalize(), message)
 
 
 @dp.message_handler(lambda message: '+краснодар' == message.text.lower())
 async def add_Krasnodar(message: types.Message):
-    await add_user(message.text[1:].lower(), message)
+    await add_user(message.text[1:].capitalize(), message)
 
 
 @dp.message_handler(lambda message: '+екатеринбург' == message.text.lower())
 async def add_Ekaterinburg(message: types.Message):
-    await add_user(message.text[1:].lower(), message)
+    await add_user(message.text[1:].capitalize(), message)
 
 
 @dp.message_handler(commands=["remove"])
 async def remove_message(message: types.Message):
-    global add_users_id
     user_id = message.from_user.id
 
-    if user_id in add_users_id['id'].values:
-        index_to_remove = add_users_id[add_users_id['id'] == user_id].index
+    with connection.cursor() as cursor:
+        select_sub = f"SELECT id FROM subscribers WHERE id = %s;"
+        cursor.execute(select_sub, user_id)
+        rows = cursor.fetchall()
 
-        add_users_id.drop(index_to_remove, inplace=True)
-        add_users_id.reset_index(drop=True, inplace=True)
-        add_users_id.to_csv(f'users_data/add_users_id.csv', index=False)
+    if len(rows) != 0:
+
+        with connection.cursor() as cursor:
+            select_sub = f"DELETE FROM subscribers WHERE id = %s;"
+            cursor.execute(select_sub, user_id)
+            connection.commit()
 
         print(f"Отписка: {message.from_user.username}")
         await bot.send_message(chat_id=log_id,
@@ -270,10 +305,13 @@ async def remove_message(message: types.Message):
 @dp.message_handler(commands=["admin"])
 async def admin_list(message: types.Message):
     user_id = message.from_user.id
-    if str(user_id) == admin_id:
+    if user_id == admin_id:
         text = (f"<b>/update</b> - <i>обновление базы данных</i> \n"
-                f"<b>/check</b> - <i>проверка баз данных</i> \n")
-        await bot.send_message(chat_id=user_id,
+                f"<b>/check</b> - <i>проверка баз данных</i> \n"
+                f"<b>/all_users</b> - <i>список всех пользователей</i> \n"
+                f"<b>/subs</b> - <i>список подписчиков на рассылку</i> \n"
+                f"<b>/off</b> - <i>выключить бота</i>")
+        await bot.send_message(chat_id=admin_id,
                                text=text,
                                parse_mode='HTML')
     else:
@@ -285,19 +323,19 @@ async def admin_list(message: types.Message):
 @dp.message_handler(commands=["update"])
 async def update_datasets(message: types.Message):
     user_id = message.from_user.id
-    if str(user_id) == admin_id:
+    if user_id == admin_id:
         text = message.text.split()
         if len(text) == 3:
             if text[1] in SET_CITIES and text[2] in SET_TYPES:
                 await update_dataset(TRANSLATE_CITIES[text[1]], text[2])
             else:
-                await bot.send_message(chat_id=user_id,
+                await bot.send_message(chat_id=admin_id,
                                        text=f'Доступные города:\n'
                                             f'{SET_CITIES}\n'
                                             f'Доступные типы:\n'
                                             f'{SET_TYPES}\n')
         else:
-            await bot.send_message(chat_id=user_id,
+            await bot.send_message(chat_id=admin_id,
                                    text=f'Формат ввода: /update city type')
     else:
         await bot.send_message(chat_id=user_id,
@@ -308,13 +346,67 @@ async def update_datasets(message: types.Message):
 @dp.message_handler(commands=["check"])
 async def check_datasets(message: types.Message):
     user_id = message.from_user.id
-    if str(user_id) == admin_id:
+    if user_id == admin_id:
         text = ""
         for type in SET_TYPES:
             for city in SET_CITIES:
                 text += f"{len(table.datasets[TRANSLATE_CITIES[city]][type])} {city} {type} \n"
-        await bot.send_message(chat_id=user_id,
+        await bot.send_message(chat_id=admin_id,
                                text=text)
+    else:
+        await bot.send_message(chat_id=user_id,
+                               text=f'Данная команда вам недоступна!')
+
+
+@dp.message_handler(commands=["all_users"])
+async def database_all_users(message: types.Message):
+    user_id = message.from_user.id
+
+    if user_id == admin_id:
+        with connection.cursor() as cursor:
+            select_sub = f"SELECT * FROM all_users;"
+            cursor.execute(select_sub)
+            rows = cursor.fetchall()
+        names = ['id', 'username', 'date']
+        text = f"{str(names[0]):^25} {str(names[1]):^25} {str(names[2]):^15} \n"
+
+        for row in rows:
+            text += f"{str(row['id']):^10} {str(row['username']):^15} {str(row['date']):<15} \n"
+
+        await bot.send_message(chat_id=admin_id,
+                               text=text)
+    else:
+        await bot.send_message(chat_id=user_id,
+                               text=f'Данная команда вам недоступна!')
+
+
+@dp.message_handler(commands=["subs"])
+async def database_subs(message: types.Message):
+    user_id = message.from_user.id
+
+    if user_id == admin_id:
+        with connection.cursor() as cursor:
+            select_sub = f"SELECT * FROM subscribers;"
+            cursor.execute(select_sub)
+            rows = cursor.fetchall()
+        names = ['id', 'date', 'city']
+        text = f"{str(names[0]):^25} {str(names[1]):^25} {str(names[2]):^15} \n"
+
+        for row in rows:
+            text += f"{str(row['id']):^10} {str(row['date']):^15} {str(row['city']):<15} \n"
+
+        await bot.send_message(chat_id=admin_id,
+                               text=text)
+    else:
+        await bot.send_message(chat_id=user_id,
+                               text=f'Данная команда вам недоступна!')
+
+
+@dp.message_handler(commands=["off"])
+async def check_datasets(message: types.Message):
+    user_id = message.from_user.id
+    if user_id == admin_id:
+        sys.exit(0)
     else:
         await bot.send_message(chat_id=user_id,
                                text=f'Данная команда вам недоступна!')
