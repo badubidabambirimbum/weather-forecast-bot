@@ -406,6 +406,9 @@ async def database_subs(message: types.Message):
 async def check_datasets(message: types.Message):
     user_id = message.from_user.id
     if user_id == admin_id:
+        await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
+        connection.close()
+        print(f"{datetime.now()} Бот выключен!")
         sys.exit(0)
     else:
         await bot.send_message(chat_id=user_id,
