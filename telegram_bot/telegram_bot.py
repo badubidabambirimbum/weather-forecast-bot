@@ -34,7 +34,6 @@ except Exception as ex:
     print("Connection refused...")
     print(ex)
     connect_text = f"❌ Не удалось установить подключение {ex}!"
-    sys.exit(0)
 
 scheduler_async = AsyncIOScheduler()
 
@@ -157,6 +156,8 @@ def start_scheduler_async():
 async def on_startup(_):
     await bot.send_message(log_id, text=f"🤖 <b>запущен</b>!", parse_mode='HTML')
     await bot.send_message(chat_id=log_id, text=connect_text, parse_mode='HTML')
+    if connect_text != f"✅ Подключение установлено!":
+        sys.exit(0)
     print(f"{datetime.now()} Бот был успешно запущен!")
 
 
@@ -360,6 +361,7 @@ async def check_datasets(message: types.Message):
                                text=f'Данная команда вам недоступна!')
 
 
+# ADMIN
 @dp.message_handler(commands=["all_users"])
 async def database_all_users(message: types.Message):
     user_id = message.from_user.id
@@ -382,6 +384,7 @@ async def database_all_users(message: types.Message):
                                text=f'Данная команда вам недоступна!')
 
 
+# ADMIN
 @dp.message_handler(commands=["subs"])
 async def database_subs(message: types.Message):
     user_id = message.from_user.id
@@ -404,6 +407,7 @@ async def database_subs(message: types.Message):
                                text=f'Данная команда вам недоступна!')
 
 
+# ADMIN
 @dp.message_handler(commands=["off"])
 async def off_bot(message: types.Message):
     user_id = message.from_user.id
@@ -417,6 +421,7 @@ async def off_bot(message: types.Message):
                                text=f'Данная команда вам недоступна!')
 
 
+# ADMIN
 @dp.message_handler(commands=["update_all"])
 async def update_all_datasets(message: types.Message):
     user_id = message.from_user.id
@@ -427,6 +432,7 @@ async def update_all_datasets(message: types.Message):
                                text=f'Данная команда вам недоступна!')
 
 
+# ADMIN
 @dp.message_handler(commands=["message_subs"])
 async def message_for_subs(message: types.Message):
     user_id = message.from_user.id
