@@ -416,7 +416,7 @@ async def off_bot(message: types.Message):
 
 
 @dp.message_handler(commands=["update_all"])
-async def off_bot(message: types.Message):
+async def update_all_datasets(message: types.Message):
     user_id = message.from_user.id
     if user_id == admin_id:
         await update_dataset()
