@@ -403,13 +403,23 @@ async def database_subs(message: types.Message):
 
 
 @dp.message_handler(commands=["off"])
-async def check_datasets(message: types.Message):
+async def off_bot(message: types.Message):
     user_id = message.from_user.id
     if user_id == admin_id:
         await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
         connection.close()
         print(f"{datetime.now()} Бот выключен!")
         sys.exit(0)
+    else:
+        await bot.send_message(chat_id=user_id,
+                               text=f'Данная команда вам недоступна!')
+
+
+@dp.message_handler(commands=["update_all"])
+async def off_bot(message: types.Message):
+    user_id = message.from_user.id
+    if user_id == admin_id:
+        await update_dataset()
     else:
         await bot.send_message(chat_id=user_id,
                                text=f'Данная команда вам недоступна!')
