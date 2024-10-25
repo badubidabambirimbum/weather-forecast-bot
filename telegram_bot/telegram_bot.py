@@ -425,6 +425,16 @@ async def update_all_datasets(message: types.Message):
                                text=f'Данная команда вам недоступна!')
 
 
+@dp.message_handler(commands=["message_subs"])
+async def message_for_subs(message: types.Message):
+    user_id = message.from_user.id
+    if user_id == admin_id:
+        await scheduled_notification()
+    else:
+        await bot.send_message(chat_id=user_id,
+                               text=f'Данная команда вам недоступна!')
+
+
 @dp.message_handler()
 async def check_message(message: types.Message):
     ikb = InlineKeyboardMarkup(row_width=3)
