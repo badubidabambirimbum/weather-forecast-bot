@@ -310,7 +310,9 @@ async def admin_list(message: types.Message):
                 f"<b>/check</b> - <i>проверка баз данных</i> \n"
                 f"<b>/all_users</b> - <i>список всех пользователей</i> \n"
                 f"<b>/subs</b> - <i>список подписчиков на рассылку</i> \n"
-                f"<b>/off</b> - <i>выключить бота</i>")
+                f"<b>/off</b> - <i>выключить бота</i> \n"
+                f"<b>/update_all</b> - <i>обновить все таблицы</i> \n"
+                f"<b>/message_subs</b> - <i>рассылка прогноза погоды</i>")
         await bot.send_message(chat_id=admin_id,
                                text=text,
                                parse_mode='HTML')
