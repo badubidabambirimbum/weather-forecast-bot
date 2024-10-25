@@ -1,3 +1,5 @@
+import time
+
 from aiogram import Bot, types, Dispatcher, executor
 from auth_data import *  # API KEY, ADMIN ID, LOG ID, ...
 from telegram_constants import *
@@ -14,6 +16,8 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from parsing.table import table
+
+time.sleep(300) # Даем время запуститься БД
 
 bot = Bot(token)
 dp = Dispatcher(bot)
