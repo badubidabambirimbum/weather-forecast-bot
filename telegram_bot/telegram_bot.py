@@ -14,14 +14,12 @@ import pymysql
 import sys
 import os
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from parsing.table import table
+import parsing_LTE as table 
 
 time.sleep(300) # Даем время запуститься БД
 
 bot = Bot(token)
 dp = Dispatcher(bot)
-table = table()
 
 try:
     connection = pymysql.connect(
@@ -30,6 +28,7 @@ try:
         user=user,
         password=password,
         database=database,
+        charset="utf8mb4",
         cursorclass=pymysql.cursors.DictCursor
     )
     print('successfully connected...')
@@ -43,9 +42,9 @@ scheduler_async = AsyncIOScheduler()
 
 
 def create_forecast(city, dist, period):
-    forecast_Yandex = table.datasets[TRANSLATE_CITIES[city]]["Yandex"].iloc[-1]
-    forecast_GisMeteo = table.datasets[TRANSLATE_CITIES[city]]["GisMeteo"].iloc[-1]
-    date_forecast = table.datasets[TRANSLATE_CITIES[city]]["Yandex"].index[-1]
+    forecast_Yandex = table.view(TRANSLATE_CITIES[city], "Yandex", connection, key='all').iloc[-1]
+    forecast_GisMeteo = table.view(TRANSLATE_CITIES[city], "GisMeteo", connection, key='all').iloc[-1]
+    date_forecast = table.view(TRANSLATE_CITIES[city], "GisMeteo", connection, key='all').index[-1]
 
     future_dates = pd.date_range(start=date_forecast, periods=period)
     forecast_data = ""
@@ -119,23 +118,24 @@ async def scheduled_notification():
 
 async def update_dataset(city=None, type=None):
     if city == None and type == None:
-        log_string = f"{datetime.now().date()}\n"
+        log_time = f"{datetime.now().date()}\n"
+        log_string = f""
         log_count = 0
         for city_ru in SET_CITIES:
             for type in SET_TYPES:
                 city = TRANSLATE_CITIES[city_ru]
                 try:
-                    table.update(city, type)
+                    table.update(city, type, connection)
                     log_string += f"✅ {city} {type} \n"
                     log_count += 1
                 except Exception as e:
                     print(f"Ошибка: {e}")
                     log_string += f"❌ {city} {type} \n"
                 await asyncio.sleep(120)
-        await bot.send_message(log_id, text=f"{log_string} {log_count} / 6", parse_mode='HTML')
+        await bot.send_message(log_id, text=f"{log_time} {log_count} / 6 \n {log_string}", parse_mode='HTML')
     else:
         try:
-            table.update(city, type)
+            table.update(city, type, connection)
             await bot.send_message(log_id, text=f"✅ {city} {type}", parse_mode='HTML')
         except Exception as e:
             print(f"Ошибка: {e}")
@@ -144,7 +144,7 @@ async def update_dataset(city=None, type=None):
 
 async def backup_dataset():
     try:
-        table.backup()
+        table.backup(connection)
         await bot.send_message(log_id, text=f"{datetime.now().date()}\n✅ BACKUP", parse_mode='HTML')
     except Exception as e:
         await bot.send_message(log_id, text=f"{datetime.now().date()}\n❌ BACKUP {e}", parse_mode='HTML')
@@ -357,7 +357,7 @@ async def check_datasets(message: types.Message):
         text = ""
         for type in SET_TYPES:
             for city in SET_CITIES:
-                text += f"{len(table.datasets[TRANSLATE_CITIES[city]][type])} {city} {type} \n"
+                text += f"{len(table.view(TRANSLATE_CITIES[city], type, connection, key='all'))} {city} {type} \n"
         await bot.send_message(chat_id=admin_id,
                                text=text)
     else:
