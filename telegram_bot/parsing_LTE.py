@@ -191,8 +191,8 @@ def backup(connection):
         with connection.cursor() as cursor:
 
             for city_key in SET_CITIES:
+                city_key = TRANSLATE_CITIES[city_key]
                 for type_key in SET_TYPES:
-                    city_key = TRANSLATE_CITIES[city_key]
 
                     table_name = f"{city_key}_{type_key}"
                     table_name_backup = f"backup_{city_key}_{type_key}"
@@ -210,8 +210,8 @@ def backup(connection):
 
         print("BACKUP GOOD!")
 
-    except:
-        raise ValueError("BACKUP ERROR!")
+    except Exception as e:
+        raise ValueError(f"ERROR! \n{e}")
 
 
 def view(city, type, connection, key="tail"):
