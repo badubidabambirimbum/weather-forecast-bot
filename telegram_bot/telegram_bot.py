@@ -132,7 +132,7 @@ async def update_dataset(city=None, type=None):
                     print(f"Ошибка: {e}")
                     log_string += f"❌ {city} {type} \n"
                 await asyncio.sleep(120)
-        await bot.send_message(log_id, text=f"{log_time} {log_count} / 6 \n {log_string}", parse_mode='HTML')
+        await bot.send_message(log_id, text=f"{log_time} {log_count} / 6 \n{log_string}", parse_mode='HTML')
     else:
         try:
             table.update(city, type, connection)
