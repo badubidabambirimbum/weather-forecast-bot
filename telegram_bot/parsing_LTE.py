@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
 import pymysql
-from auth_data import *
+from secret.auth_data import *
 from telegram_constants import *
 
 

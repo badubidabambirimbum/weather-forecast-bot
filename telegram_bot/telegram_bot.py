@@ -1,7 +1,7 @@
 import time
 
 from aiogram import Bot, types, Dispatcher, executor
-from auth_data import *  # API KEY, ADMIN ID, LOG ID, ...
+from secret.auth_data import *  # API KEY, ADMIN ID, LOG ID, ...
 from telegram_constants import *
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -167,7 +167,8 @@ async def on_startup(_):
 
 async def on_shutdown(_):
     await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
-    connection.close()
+    if connection:
+        connection.close()
     print(f"{datetime.now()} Бот выключен!")
 
 
