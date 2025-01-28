@@ -82,12 +82,12 @@ async def add_user(city: str, message: types.Message):
     # Поиск индекса в таблице
     with connection.cursor(cursor_factory=RealDictCursor) as cursor:
         select_sub = "SELECT id FROM subscribers WHERE id = %s;"
-        cursor.execute(select_sub, user_id)
+        cursor.execute(select_sub, (user_id,))
         rows = cursor.fetchall()
 
     if len(rows) == 0:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            add_new_sub = "INSERT INTO subscribers (id_subscribers, id, date, city) VALUES (NULL, %s, %s, %s);"
+            add_new_sub = "INSERT INTO subscribers (id, date, city) VALUES (%s, %s, %s);"
             cursor.execute(add_new_sub, (user_id, datetime.now().strftime('%Y-%m-%d'), city))
             connection.commit()
 
@@ -182,12 +182,12 @@ async def start_message(message: types.Message):
     # Поиск индекса в таблице
     with connection.cursor(cursor_factory=RealDictCursor) as cursor:
         select_sub = f"SELECT id FROM all_users WHERE id = %s;"
-        cursor.execute(select_sub, user_id)
+        cursor.execute(select_sub, (user_id,))
         rows = cursor.fetchall()
 
     if len(rows) == 0:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            add_new_user = "INSERT INTO all_users (id_users, id, username, date) VALUES (NULL, %s, %s, %s);"
+            add_new_user = "INSERT INTO all_users (id, username, date) VALUES (%s, %s, %s);"
             cursor.execute(add_new_user, (user_id, message.from_user.username, datetime.now().strftime('%Y-%m-%d')))
             connection.commit()
 
@@ -290,14 +290,14 @@ async def remove_message(message: types.Message):
 
     with connection.cursor(cursor_factory=RealDictCursor) as cursor:
         select_sub = f"SELECT id FROM subscribers WHERE id = %s;"
-        cursor.execute(select_sub, user_id)
+        cursor.execute(select_sub, (user_id,))
         rows = cursor.fetchall()
 
     if len(rows) != 0:
 
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             select_sub = f"DELETE FROM subscribers WHERE id = %s;"
-            cursor.execute(select_sub, user_id)
+            cursor.execute(select_sub, (user_id,))
             connection.commit()
 
         print(f"Отписка: {message.from_user.username}")

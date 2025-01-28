@@ -6,6 +6,7 @@ import pymysql
 from secret.auth_data import *
 from telegram_constants import *
 import secret.auth_data_MySQL as mysql
+from psycopg2.extras import RealDictCursor
 
 
 CITIES_URL = {
@@ -126,7 +127,7 @@ def update(city, type, connection):
     try:
         df_new = create_today(city, type)
 
-        with connection.cursor() as cursor:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             table_name = f"{city}_{type}"
 
             for index, row in df_new.iterrows():
@@ -165,7 +166,7 @@ def create_new_day(city, type, year, month, day, list_days, list_nights, list_we
     try:
         df_new = create_today(city, type)
 
-        with connection.cursor() as cursor:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             table_name = f"{city}_{type}"
 
             for index, row in df_new.iterrows():
@@ -189,7 +190,7 @@ def create_new_day(city, type, year, month, day, list_days, list_nights, list_we
 #     '''Создание backup-а'''
 #
 #     try:
-#         with connection.cursor() as cursor:
+#         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
 #
 #             for city_key in SET_CITIES:
 #                 city_key = TRANSLATE_CITIES[city_key]
@@ -251,7 +252,7 @@ def backup(connection_psql):
         )
         print('successfully connected MySQL ...')
 
-        with connection.cursor() as cursor:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
 
             for city_key in SET_CITIES:
                 city_key = TRANSLATE_CITIES[city_key]
