@@ -10,6 +10,7 @@ from datetime import datetime
 import pandas as pd
 import asyncio
 import psycopg2
+from psycopg2.extras import RealDictCursor
 
 import sys
 import os
@@ -79,13 +80,13 @@ async def add_user(city: str, message: types.Message):
     user_id = message.from_user.id
 
     # Поиск индекса в таблице
-    with connection.cursor() as cursor:
+    with connection.cursor(cursor_factory=RealDictCursor) as cursor:
         select_sub = "SELECT id FROM subscribers WHERE id = %s;"
         cursor.execute(select_sub, user_id)
         rows = cursor.fetchall()
 
     if len(rows) == 0:
-        with connection.cursor() as cursor:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             add_new_sub = "INSERT INTO subscribers (id_subscribers, id, date, city) VALUES (NULL, %s, %s, %s);"
             cursor.execute(add_new_sub, (user_id, datetime.now().strftime('%Y-%m-%d'), city))
             connection.commit()
@@ -102,7 +103,7 @@ async def add_user(city: str, message: types.Message):
 
 
 async def scheduled_notification():
-    with connection.cursor() as cursor:
+    with connection.cursor(cursor_factory=RealDictCursor) as cursor:
         select_sub = f"SELECT * FROM subscribers;"
         cursor.execute(select_sub)
         rows = cursor.fetchall()
@@ -167,8 +168,10 @@ async def on_startup(_):
 
 async def on_shutdown(_):
     await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
-    if connection:
+    try:
         connection.close()
+    except:
+        pass
     print(f"{datetime.now()} Бот выключен!")
 
 
@@ -177,13 +180,13 @@ async def start_message(message: types.Message):
     user_id = message.from_user.id
 
     # Поиск индекса в таблице
-    with connection.cursor() as cursor:
+    with connection.cursor(cursor_factory=RealDictCursor) as cursor:
         select_sub = f"SELECT id FROM all_users WHERE id = %s;"
         cursor.execute(select_sub, user_id)
         rows = cursor.fetchall()
 
     if len(rows) == 0:
-        with connection.cursor() as cursor:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             add_new_user = "INSERT INTO all_users (id_users, id, username, date) VALUES (NULL, %s, %s, %s);"
             cursor.execute(add_new_user, (user_id, message.from_user.username, datetime.now().strftime('%Y-%m-%d')))
             connection.commit()
@@ -285,14 +288,14 @@ async def add_Ekaterinburg(message: types.Message):
 async def remove_message(message: types.Message):
     user_id = message.from_user.id
 
-    with connection.cursor() as cursor:
+    with connection.cursor(cursor_factory=RealDictCursor) as cursor:
         select_sub = f"SELECT id FROM subscribers WHERE id = %s;"
         cursor.execute(select_sub, user_id)
         rows = cursor.fetchall()
 
     if len(rows) != 0:
 
-        with connection.cursor() as cursor:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             select_sub = f"DELETE FROM subscribers WHERE id = %s;"
             cursor.execute(select_sub, user_id)
             connection.commit()
@@ -372,7 +375,7 @@ async def database_all_users(message: types.Message):
     user_id = message.from_user.id
 
     if user_id == admin_id:
-        with connection.cursor() as cursor:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             select_sub = f"SELECT * FROM all_users;"
             cursor.execute(select_sub)
             rows = cursor.fetchall()
@@ -395,7 +398,7 @@ async def database_subs(message: types.Message):
     user_id = message.from_user.id
 
     if user_id == admin_id:
-        with connection.cursor() as cursor:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             select_sub = f"SELECT * FROM subscribers;"
             cursor.execute(select_sub)
             rows = cursor.fetchall()

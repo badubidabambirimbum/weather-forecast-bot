@@ -222,11 +222,7 @@ def view(city, type, connection, key="tail"):
 
     query = f"SELECT * FROM {table_name};"  # SQL-запрос
 
-    with connection.cursor() as cursor:
-        cursor.execute(query)
-        data = cursor.fetchall() 
-
-    df = pd.DataFrame(data)
+    df = pd.read_sql_query(query, connection)
     df.set_index('date', inplace=True)
     
     if key == "tail":
@@ -328,5 +324,7 @@ def backup(connection_psql):
     except Exception as ex:
         print(f"ERROR! {ex}")
     finally:
-        if connection:
+        try:
             connection.close()
+        except:
+            pass
