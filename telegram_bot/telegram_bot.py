@@ -9,27 +9,27 @@ from Keyboards import kb, kb_help, kb_cities, ikb_info
 from datetime import datetime
 import pandas as pd
 import asyncio
-import pymysql
+import psycopg2
 
 import sys
 import os
 
 import parsing_LTE as table 
 
-time.sleep(300) # Даем время запуститься БД
+time.sleep(60) # Даем время запуститься БД
 
 bot = Bot(token)
 dp = Dispatcher(bot)
 
 try:
-    connection = pymysql.connect(
+    connection = psycopg2.connect(
         host=host,
         port=port,
         user=user,
         password=password,
         database=database,
-        charset="utf8mb4",
-        cursorclass=pymysql.cursors.DictCursor
+        # charset="utf8mb4",
+        # cursorclass=pymysql.cursors.DictCursor
     )
     print('successfully connected...')
     connect_text = f"✅ Подключение установлено!"

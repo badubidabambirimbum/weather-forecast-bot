@@ -5,9 +5,10 @@ from datetime import datetime
 import pymysql
 from secret.auth_data import *
 from telegram_constants import *
+import secret.auth_data_MySQL as mysql
 
 
-cities_url = {
+CITIES_URL = {
                 "GisMeteo":
                         {"Moscow": 'https://www.gismeteo.ru/weather-moscow-4368/10-days/',
                         "Krasnodar": 'https://www.gismeteo.ru/weather-krasnodar-5136/10-days/',
@@ -21,7 +22,7 @@ cities_url = {
 def get_weather_forecast_Yandex(city, type):
     '''Получение данных с сайта Yandex'''
 
-    city_url = cities_url[type][city]
+    city_url = CITIES_URL[type][city]
 
     headers = requests.utils.default_headers()
 
@@ -56,7 +57,7 @@ def get_weather_forecast_Yandex(city, type):
 def get_weather_forecast_GisMeteo(city, type):
     '''Получение данных с сайта GisMeteo'''
 
-    city_url = cities_url[type][city]
+    city_url = CITIES_URL[type][city]
 
     headers = requests.utils.default_headers()
 
@@ -184,34 +185,34 @@ def create_new_day(city, type, year, month, day, list_days, list_nights, list_we
         raise ValueError(f"{city} {type} ERROR!")
 
 
-def backup(connection):
-    '''Создание backup-а'''
-    
-    try:
-        with connection.cursor() as cursor:
-
-            for city_key in SET_CITIES:
-                city_key = TRANSLATE_CITIES[city_key]
-                for type_key in SET_TYPES:
-
-                    table_name = f"{city_key}_{type_key}"
-                    table_name_backup = f"backup_{city_key}_{type_key}"
-
-                    cursor.execute(f"""
-                        DROP TABLE IF EXISTS {table_name_backup};
-                    """)
-
-                    cursor.execute(f"""
-                        CREATE TABLE {table_name_backup} AS SELECT * FROM {table_name};
-                    """)
-
-                    # Сохранение изменений
-                    connection.commit()
-
-        print("BACKUP GOOD!")
-
-    except Exception as e:
-        raise ValueError(f"ERROR! \n{e}")
+# def backup(connection):
+#     '''Создание backup-а'''
+#
+#     try:
+#         with connection.cursor() as cursor:
+#
+#             for city_key in SET_CITIES:
+#                 city_key = TRANSLATE_CITIES[city_key]
+#                 for type_key in SET_TYPES:
+#
+#                     table_name = f"{city_key}_{type_key}"
+#                     table_name_backup = f"backup_{city_key}_{type_key}"
+#
+#                     cursor.execute(f"""
+#                         DROP TABLE IF EXISTS {table_name_backup};
+#                     """)
+#
+#                     cursor.execute(f"""
+#                         CREATE TABLE {table_name_backup} AS SELECT * FROM {table_name};
+#                     """)
+#
+#                     # Сохранение изменений
+#                     connection.commit()
+#
+#         print("BACKUP GOOD!")
+#
+#     except Exception as e:
+#         raise ValueError(f"ERROR! \n{e}")
 
 
 def view(city, type, connection, key="tail"):
@@ -236,3 +237,96 @@ def view(city, type, connection, key="tail"):
         return df
     else:
         raise KeyError("key Error!")
+
+
+def backup(connection_psql):
+    '''Создание backup-а'''
+
+    try:
+
+        connection = pymysql.connect(
+            host=mysql.host,
+            port=mysql.port,
+            user=mysql.user,
+            password=mysql.password,
+            database=mysql.database,
+            charset="utf8mb4",
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        print('successfully connected MySQL ...')
+
+        with connection.cursor() as cursor:
+
+            for city_key in SET_CITIES:
+                city_key = TRANSLATE_CITIES[city_key]
+                for type_key in SET_TYPES:
+
+                    df = view(city_key, type_key, connection_psql, 'all')
+
+                    # Создание таблицы (если она еще не создана)
+                    table_name = f"{city_key}_{type_key}"
+                    cursor.execute(f"""
+                        CREATE TABLE IF NOT EXISTS {table_name} (
+                            date DATE,
+                            day1 INT,
+                            day2 INT,
+                            day3 INT,
+                            day4 INT,
+                            day5 INT,
+                            day6 INT,
+                            day7 INT,
+                            day8 INT,
+                            day9 INT,
+                            day10 INT,
+                            night1 INT,
+                            night2 INT,
+                            night3 INT,
+                            night4 INT,
+                            night5 INT,
+                            night6 INT,
+                            night7 INT,
+                            night8 INT,
+                            night9 INT,
+                            night10 INT,
+                            weather1 VARCHAR(255),
+                            weather2 VARCHAR(255),
+                            weather3 VARCHAR(255),
+                            weather4 VARCHAR(255),
+                            weather5 VARCHAR(255),
+                            weather6 VARCHAR(255),
+                            weather7 VARCHAR(255),
+                            weather8 VARCHAR(255),
+                            weather9 VARCHAR(255),
+                            weather10 VARCHAR(255)
+                        );
+                    """)
+
+                    cursor.execute(f"""
+                        DELETE FROM {table_name}
+                    """)
+
+                    cursor.execute(f"""
+                        ALTER TABLE {table_name} CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                    """)
+
+                    # Загрузка данных в таблицу
+                    for index, row in df.iterrows():
+                        cursor.execute(f"""
+                            INSERT INTO {table_name} (
+                                                date,
+                                                day1,day2,day3,day4,day5,day6,day7,day8,day9,day10,
+                                                night1,night2,night3,night4,night5,night6,night7,night8,night9,night10,
+                                                weather1,weather2,weather3,weather4,weather5,weather6,weather7,weather8,weather9,weather10)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                        """, (index, *tuple(row)))  # Передаем значения в виде кортежа
+
+                    # Сохранение изменений
+                    connection.commit()
+
+        print("BACKUP GOOD!")
+
+    except Exception as ex:
+        print(f"ERROR! {ex}")
+    finally:
+        if connection:
+            connection.close()
