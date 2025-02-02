@@ -216,12 +216,12 @@ def create_new_day(city, type, year, month, day, list_days, list_nights, list_we
 #         raise ValueError(f"ERROR! \n{e}")
 
 
-def view(city, type, connection, key="tail"):
+def view(city, type, connection, key="tail", OrderBy_column='date'):
     '''Просмотр таблицы по городу и сайту'''
 
     table_name = f"{city}_{type}"
 
-    query = f"SELECT * FROM {table_name};"  # SQL-запрос
+    query = f"SELECT * FROM {table_name} order by {OrderBy_column};"  # SQL-запрос
 
     df = pd.read_sql_query(query, connection)
     df.set_index('date', inplace=True)
@@ -252,7 +252,7 @@ def backup(connection_psql):
         )
         print('successfully connected MySQL ...')
 
-        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+        with connection.cursor() as cursor:
 
             for city_key in SET_CITIES:
                 city_key = TRANSLATE_CITIES[city_key]
