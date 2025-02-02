@@ -28,7 +28,7 @@ def create_model(x_train,
     regressor.add(LSTM(units=units, return_sequences=True))
     regressor.add(Dropout(0.2))
     
-    regressor.add(LSTM(units=units))
+    regressor.add(LSTM(units=units//2, activation='relu'))
     regressor.add(Dropout(0.2))
     
     regressor.add(Dense(units=n_forecast * n_features, activation='linear'))
