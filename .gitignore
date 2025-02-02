@@ -13,4 +13,4 @@ venv
 .vscode
 .DS_Store
 output.log
-secret
+telegram_bot/secret
