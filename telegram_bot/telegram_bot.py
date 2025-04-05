@@ -1,80 +1,83 @@
-import time
-
 from aiogram import Bot, types, Dispatcher, executor
+
 from secret.auth_data import *  # API KEY, ADMIN ID, LOG ID, ...
-from telegram_constants import *
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from Keyboards import kb, kb_help, kb_cities, ikb_info
 from datetime import datetime
 import pandas as pd
 import asyncio
-import psycopg2
 from psycopg2.extras import RealDictCursor
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import sys
 import os
 
-import parsing_LTE as table 
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', 'library')))
 
-time.sleep(60) # Даем время запуститься БД
+import additional_functions as lib
+from telegram_constants import WEATHER_YANDEX_SMILE, WEATHER_GISMETEO_SMILE, WEATHER_GISMETEO_EXCEPTIONS, SET_CITIES, SET_TYPES, TRANSLATE_CITIES
+
 
 bot = Bot(token)
 dp = Dispatcher(bot)
 
-try:
-    connection = psycopg2.connect(
-        host=host,
-        port=port,
-        user=user,
-        password=password,
-        database=database,
-        # charset="utf8mb4",
-        # cursorclass=pymysql.cursors.DictCursor
-    )
-    print('successfully connected...')
-    connect_text = f"✅ Подключение установлено!"
-except Exception as ex:
-    print("Connection refused...")
-    print(ex)
-    connect_text = f"❌ Не удалось установить подключение {ex}!"
-
 scheduler_async = AsyncIOScheduler()
 
-
-def create_forecast(city, dist, period):
-    forecast_Yandex = table.view(TRANSLATE_CITIES[city], "Yandex", connection, key='all').iloc[-1]
-    forecast_GisMeteo = table.view(TRANSLATE_CITIES[city], "GisMeteo", connection, key='all').iloc[-1]
-    date_forecast = table.view(TRANSLATE_CITIES[city], "GisMeteo", connection, key='all').index[-1]
-
-    future_dates = pd.date_range(start=date_forecast, periods=period)
-    forecast_data = ""
-
-    for i in range(1, int(dist) + 1):
-        date = future_dates[i - 1]
-        if (forecast_Yandex[f'weather{i}'] in WEATHER_YANDEX_SMILE and
-                forecast_GisMeteo[f'weather{i}'] in WEATHER_GISMETEO_SMILE):
-            if WEATHER_YANDEX_SMILE[forecast_Yandex[f'weather{i}']] == WEATHER_GISMETEO_SMILE[forecast_GisMeteo[f'weather{i}']]:
-                forecast_data += (f"\n"
-                                  f"✨ {date.strftime('%Y-%m-%d')} ✨\n"
-                                  f"<b>Температура</b> ⬇️ <b>{str(forecast_Yandex[f'night{i}'])}°</b> ⬆️ <b>{str(forecast_Yandex[f'day{i}'])}°</b>\n"
-                                  f"🔸<b>Yandex</b> и 🔹<b>GisMeteo</b> прогнозируют {WEATHER_GISMETEO_SMILE[forecast_GisMeteo[f'weather{i}']]}\n")
-            else:
-                forecast_data += (f"\n"
-                                  f"✨ {date.strftime('%Y-%m-%d')} ✨\n"
-                                  f"<b>Температура</b> ⬇️ <b>{str(forecast_Yandex[f'night{i}'])}°</b> ⬆️ <b>{str(forecast_Yandex[f'day{i}'])}°</b>\n "
-                                  f"🔸<b>Yandex</b> прогнозирует {WEATHER_YANDEX_SMILE[forecast_Yandex[f'weather{i}']]}\n "
-                                  f"🔹<b>GisMeteo</b> прогнозирует {WEATHER_GISMETEO_SMILE[forecast_GisMeteo[f'weather{i}']]}\n")
-        else:
-            forecast_data += (f"\n"
-                              f"✨ {date.strftime('%Y-%m-%d')} ✨\n"
-                              f"<b>Температура</b> ⬇️ <b>{str(forecast_Yandex[f'night{i}'])}°</b> ⬆️ <b>{str(forecast_Yandex[f'day{i}'])}°</b>\n "
-                              f"🔸<b>Yandex</b> прогнозирует {forecast_Yandex[f'weather{i}']}\n "
-                              f"🔹<b>GisMeteo</b> прогнозирует {forecast_GisMeteo[f'weather{i}']}\n")
-
-    return forecast_data
+connection, connect_text = lib.create_connect(host=host,
+                                              port=port,
+                                              user=user,
+                                              password=password,
+                                              database=database)
 
 
+# Загрузка обновлений в таблицу
+async def update_dataset(city=None, type=None):
+    if city == None and type == None:
+        log_time = f"{datetime.now().date()}\n"
+        log_string = f""
+        log_count = 0
+        for city_ru in SET_CITIES:
+            for type in SET_TYPES:
+                city = TRANSLATE_CITIES[city_ru]
+                try:
+                    lib.update(city, type, connection)
+                    log_string += f"✅ {city} {type} \n"
+                    log_count += 1
+                except Exception as e:
+                    print(f"Ошибка: {e}")
+                    log_string += f"❌ {city} {type} \n"
+                await asyncio.sleep(120)
+        await bot.send_message(log_id, text=f"{log_time} {log_count} / 6 \n{log_string}", parse_mode='HTML')
+    else:
+        try:
+            lib.update(city, type, connection)
+            await bot.send_message(log_id, text=f"✅ {city} {type}", parse_mode='HTML')
+        except Exception as e:
+            await bot.send_message(log_id, text=f"❌ {city} {type}\n{{e}}", parse_mode='HTML')
+
+
+# Отправка прогноза подписчикам
+async def scheduled_notification():
+    with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+        select_sub = f"SELECT * FROM subscribers;"
+        cursor.execute(select_sub)
+        rows = cursor.fetchall()
+    for row in rows:
+        try:
+            await bot.send_message(row["id"], text=lib.create_forecast(row["city"], 1, 1), parse_mode='HTML')
+        except Exception as e:
+            await bot.send_message(chat_id=log_id,
+                                   text=f"❌ Не удалось отправить сообщение пользователю {row['id']}: {e}",
+                                   parse_mode='HTML')
+
+
+# Создание расписания для автоматического запуска функций
+def start_scheduler_async():
+    scheduler_async.add_job(scheduled_notification, 'cron', hour=7, minute=0)
+    scheduler_async.start()
+
+
+# Добавление подписчика
 async def add_user(city: str, message: types.Message):
 
     user_id = message.from_user.id
@@ -102,62 +105,7 @@ async def add_user(city: str, message: types.Message):
         await message.reply("Вы уже подписаны на оповещение о погоде❗️️")
 
 
-async def scheduled_notification():
-    with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-        select_sub = f"SELECT * FROM subscribers;"
-        cursor.execute(select_sub)
-        rows = cursor.fetchall()
-    for row in rows:
-        try:
-            await bot.send_message(row["id"], text=create_forecast(row["city"], 1, 1), parse_mode='HTML')
-        except Exception as e:
-            print(f"Не удалось отправить сообщение пользователю {row['id']}: {e}")
-            await bot.send_message(chat_id=log_id,
-                                   text=f"❌ Не удалось отправить сообщение пользователю {row['id']}: {e}",
-                                   parse_mode='HTML')
-
-
-async def update_dataset(city=None, type=None):
-    if city == None and type == None:
-        log_time = f"{datetime.now().date()}\n"
-        log_string = f""
-        log_count = 0
-        for city_ru in SET_CITIES:
-            for type in SET_TYPES:
-                city = TRANSLATE_CITIES[city_ru]
-                try:
-                    table.update(city, type, connection)
-                    log_string += f"✅ {city} {type} \n"
-                    log_count += 1
-                except Exception as e:
-                    print(f"Ошибка: {e}")
-                    log_string += f"❌ {city} {type} \n"
-                await asyncio.sleep(120)
-        await bot.send_message(log_id, text=f"{log_time} {log_count} / 6 \n{log_string}", parse_mode='HTML')
-    else:
-        try:
-            table.update(city, type, connection)
-            await bot.send_message(log_id, text=f"✅ {city} {type}", parse_mode='HTML')
-        except Exception as e:
-            print(f"Ошибка: {e}")
-            await bot.send_message(log_id, text=f"❌ {city} {type}", parse_mode='HTML')
-
-
-async def backup_dataset():
-    try:
-        table.backup(connection)
-        await bot.send_message(log_id, text=f"{datetime.now().date()}\n✅ BACKUP", parse_mode='HTML')
-    except Exception as e:
-        await bot.send_message(log_id, text=f"{datetime.now().date()}\n❌ BACKUP {e}", parse_mode='HTML')
-
-
-def start_scheduler_async():
-    scheduler_async.add_job(scheduled_notification, 'cron', hour=7, minute=0)
-    scheduler_async.add_job(backup_dataset, 'cron', hour=4, minute=50)
-    scheduler_async.add_job(update_dataset, 'cron', hour=5, minute=0)
-    scheduler_async.start()
-
-
+# Функция, которая вызывается при запуске бота
 async def on_startup(_):
     await bot.send_message(log_id, text=f"🤖 <b>запущен</b>!", parse_mode='HTML')
     await bot.send_message(chat_id=log_id, text=connect_text, parse_mode='HTML')
@@ -166,6 +114,7 @@ async def on_startup(_):
     print(f"{datetime.now()} Бот был успешно запущен!")
 
 
+# Функция, которая вызывается при выключении бота
 async def on_shutdown(_):
     await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
     try:
@@ -361,7 +310,7 @@ async def check_datasets(message: types.Message):
         text = ""
         for type in SET_TYPES:
             for city in SET_CITIES:
-                text += f"{len(table.view(TRANSLATE_CITIES[city], type, connection, key='all'))} {city} {type} \n"
+                text += f"{len(lib.view(TRANSLATE_CITIES[city], type, connection, key='all'))} {city} {type} \n"
         await bot.send_message(chat_id=admin_id,
                                text=text)
     else:
@@ -476,7 +425,7 @@ async def callback_message(callback: types.CallbackQuery):
     await callback.message.delete_reply_markup()
     city, dist = callback.data.split()
     await bot.send_message(callback.from_user.id, text=f'Прогноз в городе {city} на {dist} дней:')
-    await bot.send_message(callback.from_user.id, text=create_forecast(city, dist, 10), parse_mode='HTML')
+    await bot.send_message(callback.from_user.id, text=lib.create_forecast(city, dist, 10), parse_mode='HTML')
 
 
 if __name__ == "__main__":
