@@ -1,0 +1,82 @@
+# Для корректного запуска этого docker-compose файла требуется в одной директории с файлом:
+# 1. Создать .env файл и записать туда все переменные, которые тут используются - ${}
+# 2. Создать папку init и в ней создать SQL файл, в котором создается пользователь и БД для AirFlow
+#    Данный SQL скрипт выполнится при первом поднятии контейнера database
+# Запуск: docker-compose --env-file /secret/secret.env up
+
+x-airflow-common:
+  &airflow-common
+  image: apache/airflow:2.8.1-python3.10
+  environment:
+    &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER_airflow}:${POSTGRES_PASSWORD_airflow}@database:5432/${POSTGRES_DB_airflow}
+    AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    AIRFLOW__WEBSERVER__WEB_SERVER_PORT: 8080
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+  networks:
+      - telegram_bot_network
+  depends_on:
+    - database
+
+services:
+  telegram_bot:
+    image: badubidabambirimbum/telegram_bot_image
+    container_name: telegram_bot
+    volumes:
+      - ./secret:/app/secret
+    networks:
+      - telegram_bot_network
+    restart: unless-stopped
+    depends_on:
+      - database
+
+  database:
+    image: badubidabambirimbum/postgres
+    container_name: database
+    environment:
+      - POSTGRES_DB: ${POSTGRES_DB}
+      - POSTGRES_USER: ${POSTGRES_USER}
+      - POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./psql:/var/lib/postgresql/data
+      - ./secret/init:/docker-entrypoint-initdb.d
+    networks:
+      - telegram_bot_network
+    ports:
+      - 54321:5432
+    restart: unless-stopped
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow-init
+    entrypoint: >
+      bash -c "
+      airflow db init &&
+      airflow users create --username ${AIRFLOW_USER} --firstname ${AIRFLOW_FIRSTNAME} --lastname ${AIRFLOW_LASTNAME} --role ${AIRFLOW_ROLE} --email ${AIRFLOW_EMAIL} --password ${AIRFLOW_PASSWORD}
+      "
+  
+  webserver:
+    <<: *airflow-common
+    container_name: airflow-webserver
+    ports:
+      - "7777:8080"
+    command: webserver
+    restart: unless-stopped
+
+  scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    command: scheduler
+    restart: unless-stopped
+
+networks:
+  telegram_bot_network:
+    name: telegram_bot_network
+
