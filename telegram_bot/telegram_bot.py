@@ -1,6 +1,6 @@
 from aiogram import Bot, types, Dispatcher, executor
 
-from secret.auth_data import *  # API KEY, ADMIN ID, LOG ID, ...
+import secret.auth_data as s  # API KEY, ADMIN ID, LOG ID, ...
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from Keyboards import kb, kb_help, kb_cities, ikb_info
 from datetime import datetime
@@ -15,19 +15,20 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', 'library')))
 
 import additional_functions as lib
+import airflow_functions as afl
 from telegram_constants import WEATHER_YANDEX_SMILE, WEATHER_GISMETEO_SMILE, WEATHER_GISMETEO_EXCEPTIONS, SET_CITIES, SET_TYPES, TRANSLATE_CITIES
 
 
-bot = Bot(token)
+bot = Bot(s.token)
 dp = Dispatcher(bot)
 
 scheduler_async = AsyncIOScheduler()
 
-connection, connect_text = lib.create_connect(host=host,
-                                              port=port,
-                                              user=user,
-                                              password=password,
-                                              database=database)
+connection, connect_text = lib.create_connect(host=s.host,
+                                              port=s.port,
+                                              user=s.user,
+                                              password=s.password,
+                                              database=s.database)
 
 
 # Загрузка обновлений в таблицу
@@ -40,33 +41,33 @@ async def update_dataset(city=None, type=None):
             for type in SET_TYPES:
                 city = TRANSLATE_CITIES[city_ru]
                 try:
-                    lib.update(city, type, connection)
+                    afl.update(city, type, connection)
                     log_string += f"✅ {city} {type} \n"
                     log_count += 1
                 except Exception as e:
                     print(f"Ошибка: {e}")
                     log_string += f"❌ {city} {type} \n"
                 await asyncio.sleep(120)
-        await bot.send_message(log_id, text=f"{log_time} {log_count} / 6 \n{log_string}", parse_mode='HTML')
+        await bot.send_message(s.log_id, text=f"{log_time} {log_count} / 6 \n{log_string}", parse_mode='HTML')
     else:
         try:
-            lib.update(city, type, connection)
-            await bot.send_message(log_id, text=f"✅ {city} {type}", parse_mode='HTML')
+            afl.update(city, type, connection)
+            await bot.send_message(s.log_id, text=f"✅ {city} {type}", parse_mode='HTML')
         except Exception as e:
-            await bot.send_message(log_id, text=f"❌ {city} {type}\n{{e}}", parse_mode='HTML')
+            await bot.send_message(s.log_id, text=f"❌ {city} {type}\n{{e}}", parse_mode='HTML')
 
 
 # Отправка прогноза подписчикам
 async def scheduled_notification():
     with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-        select_sub = f"SELECT * FROM subscribers;"
+        select_sub = f"SELECT * FROM prom.subscribers;"
         cursor.execute(select_sub)
         rows = cursor.fetchall()
     for row in rows:
         try:
             await bot.send_message(row["id"], text=lib.create_forecast(row["city"], 1, 1), parse_mode='HTML')
         except Exception as e:
-            await bot.send_message(chat_id=log_id,
+            await bot.send_message(chat_id=s.log_id,
                                    text=f"❌ Не удалось отправить сообщение пользователю {row['id']}: {e}",
                                    parse_mode='HTML')
 
@@ -84,18 +85,18 @@ async def add_user(city: str, message: types.Message):
 
     # Поиск индекса в таблице
     with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-        select_sub = "SELECT id FROM subscribers WHERE id = %s;"
+        select_sub = "SELECT id FROM prom.subscribers WHERE id = %s;"
         cursor.execute(select_sub, (user_id,))
         rows = cursor.fetchall()
 
     if len(rows) == 0:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            add_new_sub = "INSERT INTO subscribers (id, date, city) VALUES (%s, %s, %s);"
+            add_new_sub = "INSERT INTO prom.subscribers (id, date, city) VALUES (%s, %s, %s);"
             cursor.execute(add_new_sub, (user_id, datetime.now().strftime('%Y-%m-%d'), city))
             connection.commit()
 
         print(f"Новая подписка на оповещение о погоде: {message.from_user.username}")
-        await bot.send_message(chat_id=log_id,
+        await bot.send_message(chat_id=s.log_id,
                                text=f"✅ Новая подписка на оповещение о погоде: {message.from_user.username}",
                                parse_mode='HTML')
 
@@ -107,8 +108,8 @@ async def add_user(city: str, message: types.Message):
 
 # Функция, которая вызывается при запуске бота
 async def on_startup(_):
-    await bot.send_message(log_id, text=f"🤖 <b>запущен</b>!", parse_mode='HTML')
-    await bot.send_message(chat_id=log_id, text=connect_text, parse_mode='HTML')
+    await bot.send_message(s.log_id, text=f"🤖 <b>запущен</b>!", parse_mode='HTML')
+    await bot.send_message(chat_id=s.log_id, text=connect_text, parse_mode='HTML')
     if connect_text != f"✅ Подключение установлено!":
         sys.exit(0)
     print(f"{datetime.now()} Бот был успешно запущен!")
@@ -116,7 +117,7 @@ async def on_startup(_):
 
 # Функция, которая вызывается при выключении бота
 async def on_shutdown(_):
-    await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
+    await bot.send_message(s.log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
     try:
         connection.close()
     except:
@@ -130,18 +131,18 @@ async def start_message(message: types.Message):
 
     # Поиск индекса в таблице
     with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-        select_sub = f"SELECT id FROM all_users WHERE id = %s;"
+        select_sub = f"SELECT id FROM prom.all_users WHERE id = %s;"
         cursor.execute(select_sub, (user_id,))
         rows = cursor.fetchall()
 
     if len(rows) == 0:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            add_new_user = "INSERT INTO all_users (id, username, date) VALUES (%s, %s, %s);"
+            add_new_user = "INSERT INTO prom.all_users (id, username, date) VALUES (%s, %s, %s);"
             cursor.execute(add_new_user, (user_id, message.from_user.username, datetime.now().strftime('%Y-%m-%d')))
             connection.commit()
 
         print(f"Новый пользователь: {message.from_user.username}!!!")
-        await bot.send_message(chat_id=log_id,
+        await bot.send_message(chat_id=s.log_id,
                                text=f"🆕 Новый пользователь: {message.from_user.username}!!!",
                                parse_mode='HTML')
 
@@ -238,19 +239,19 @@ async def remove_message(message: types.Message):
     user_id = message.from_user.id
 
     with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-        select_sub = f"SELECT id FROM subscribers WHERE id = %s;"
+        select_sub = f"SELECT id FROM prom.subscribers WHERE id = %s;"
         cursor.execute(select_sub, (user_id,))
         rows = cursor.fetchall()
 
     if len(rows) != 0:
 
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            select_sub = f"DELETE FROM subscribers WHERE id = %s;"
+            select_sub = f"DELETE FROM prom.subscribers WHERE id = %s;"
             cursor.execute(select_sub, (user_id,))
             connection.commit()
 
         print(f"Отписка: {message.from_user.username}")
-        await bot.send_message(chat_id=log_id,
+        await bot.send_message(chat_id=s.log_id,
                                text=f"❗️ Отписка: {message.from_user.username}",
                                parse_mode='HTML')
 
@@ -263,7 +264,7 @@ async def remove_message(message: types.Message):
 @dp.message_handler(commands=["admin"])
 async def admin_list(message: types.Message):
     user_id = message.from_user.id
-    if user_id == admin_id:
+    if user_id == s.admin_id:
         text = (f"<b>/update</b> - <i>обновление базы данных</i> \n"
                 f"<b>/check</b> - <i>проверка баз данных</i> \n"
                 f"<b>/all_users</b> - <i>список всех пользователей</i> \n"
@@ -271,7 +272,7 @@ async def admin_list(message: types.Message):
                 f"<b>/off</b> - <i>выключить бота</i> \n"
                 f"<b>/update_all</b> - <i>обновить все таблицы</i> \n"
                 f"<b>/message_subs</b> - <i>рассылка прогноза погоды</i>")
-        await bot.send_message(chat_id=admin_id,
+        await bot.send_message(chat_id=s.admin_id,
                                text=text,
                                parse_mode='HTML')
     else:
@@ -283,19 +284,19 @@ async def admin_list(message: types.Message):
 @dp.message_handler(commands=["update"])
 async def update_datasets(message: types.Message):
     user_id = message.from_user.id
-    if user_id == admin_id:
+    if user_id == s.admin_id:
         text = message.text.split()
         if len(text) == 3:
             if text[1] in SET_CITIES and text[2] in SET_TYPES:
                 await update_dataset(TRANSLATE_CITIES[text[1]], text[2])
             else:
-                await bot.send_message(chat_id=admin_id,
+                await bot.send_message(chat_id=s.admin_id,
                                        text=f'Доступные города:\n'
                                             f'{SET_CITIES}\n'
                                             f'Доступные типы:\n'
                                             f'{SET_TYPES}\n')
         else:
-            await bot.send_message(chat_id=admin_id,
+            await bot.send_message(chat_id=s.admin_id,
                                    text=f'Формат ввода: /update city type')
     else:
         await bot.send_message(chat_id=user_id,
@@ -306,12 +307,12 @@ async def update_datasets(message: types.Message):
 @dp.message_handler(commands=["check"])
 async def check_datasets(message: types.Message):
     user_id = message.from_user.id
-    if user_id == admin_id:
+    if user_id == s.admin_id:
         text = ""
         for type in SET_TYPES:
             for city in SET_CITIES:
                 text += f"{len(lib.view(TRANSLATE_CITIES[city], type, connection, key='all'))} {city} {type} \n"
-        await bot.send_message(chat_id=admin_id,
+        await bot.send_message(chat_id=s.admin_id,
                                text=text)
     else:
         await bot.send_message(chat_id=user_id,
@@ -323,9 +324,9 @@ async def check_datasets(message: types.Message):
 async def database_all_users(message: types.Message):
     user_id = message.from_user.id
 
-    if user_id == admin_id:
+    if user_id == s.admin_id:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            select_sub = f"SELECT * FROM all_users;"
+            select_sub = f"SELECT * FROM prom.all_users;"
             cursor.execute(select_sub)
             rows = cursor.fetchall()
         names = ['id', 'username', 'date']
@@ -334,7 +335,7 @@ async def database_all_users(message: types.Message):
         for row in rows:
             text += f"{str(row['id']):^10} {str(row['username']):^15} {str(row['date']):<15} \n"
 
-        await bot.send_message(chat_id=admin_id,
+        await bot.send_message(chat_id=s.admin_id,
                                text=text)
     else:
         await bot.send_message(chat_id=user_id,
@@ -346,9 +347,9 @@ async def database_all_users(message: types.Message):
 async def database_subs(message: types.Message):
     user_id = message.from_user.id
 
-    if user_id == admin_id:
+    if user_id == s.admin_id:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            select_sub = f"SELECT * FROM subscribers;"
+            select_sub = f"SELECT * FROM prom.subscribers;"
             cursor.execute(select_sub)
             rows = cursor.fetchall()
         names = ['id', 'date', 'city']
@@ -357,7 +358,7 @@ async def database_subs(message: types.Message):
         for row in rows:
             text += f"{str(row['id']):^10} {str(row['date']):^15} {str(row['city']):<15} \n"
 
-        await bot.send_message(chat_id=admin_id,
+        await bot.send_message(chat_id=s.admin_id,
                                text=text)
     else:
         await bot.send_message(chat_id=user_id,
@@ -368,8 +369,8 @@ async def database_subs(message: types.Message):
 @dp.message_handler(commands=["off"])
 async def off_bot(message: types.Message):
     user_id = message.from_user.id
-    if user_id == admin_id:
-        await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
+    if user_id == s.admin_id:
+        await bot.send_message(s.log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
         connection.close()
         print(f"{datetime.now()} Бот выключен!")
         sys.exit(0)
@@ -382,7 +383,7 @@ async def off_bot(message: types.Message):
 @dp.message_handler(commands=["update_all"])
 async def update_all_datasets(message: types.Message):
     user_id = message.from_user.id
-    if user_id == admin_id:
+    if user_id == s.admin_id:
         await update_dataset()
     else:
         await bot.send_message(chat_id=user_id,
@@ -393,7 +394,7 @@ async def update_all_datasets(message: types.Message):
 @dp.message_handler(commands=["message_subs"])
 async def message_for_subs(message: types.Message):
     user_id = message.from_user.id
-    if user_id == admin_id:
+    if user_id == s.admin_id:
         await scheduled_notification()
     else:
         await bot.send_message(chat_id=user_id,
