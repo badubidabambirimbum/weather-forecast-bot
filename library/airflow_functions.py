@@ -2,9 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
-# from secret.auth_data import *
-# from telegram_constants import *
 from psycopg2.extras import RealDictCursor
+import additional_functions as lib
 
 import asyncio
 
@@ -20,7 +19,7 @@ CITIES_URL = {
          "Ekaterinburg": 'https://yandex.ru/weather?lat=56.8380127&lon=60.59747314'}}
 
 
-def get_weather_forecast_Yandex(city, type):
+def get_weather_forecast_Yandex(city, type, **kwargs):
     '''Получение данных с сайта Yandex'''
 
     city_url = CITIES_URL[type][city]
@@ -55,7 +54,7 @@ def get_weather_forecast_Yandex(city, type):
     return forecast_data
 
 
-def get_weather_forecast_GisMeteo(city, type):
+def get_weather_forecast_GisMeteo(city, type, **kwargs):
     '''Получение данных с сайта GisMeteo'''
 
     city_url = CITIES_URL[type][city]
@@ -90,15 +89,20 @@ def get_weather_forecast_GisMeteo(city, type):
     return forecast_data
 
 
-def create_today(city, type, today=datetime.now().strftime('%Y-%m-%d')):
+def create_today(city, type, airflow_mode='False', today=datetime.now().strftime('%Y-%m-%d'), **kwargs):
     '''Создание таблицы из одной строки с подгруженными данными'''
 
-    if type == "Yandex":
-        forecast_data = get_weather_forecast_Yandex(city, type)
-    elif type == "GisMeteo":
-        forecast_data = get_weather_forecast_GisMeteo(city, type)
+    if airflow_mode:
+        ti = kwargs['ti']
+        forecast_data = ti.xcom_pull(task_ids='get_weather_forecast')
+
     else:
-        raise "TypeError"
+        if type == "Yandex":
+            forecast_data = get_weather_forecast_Yandex(city, type)
+        elif type == "GisMeteo":
+            forecast_data = get_weather_forecast_GisMeteo(city, type)
+        else:
+            raise "TypeError"
 
     max_temps = [data['max_temp'] for data in forecast_data]
     min_temps = [data['min_temp'] for data in forecast_data]
@@ -121,14 +125,27 @@ def create_today(city, type, today=datetime.now().strftime('%Y-%m-%d')):
     return df
 
 
-def update(city, type, connection):
+def update(city, type, connection=None, airflow_mode='False', **kwargs):
     '''Обновление таблицы по указанному городу и сайту'''
 
+    if airflow_mode:
+        from airflow.models import Variable
+
+        ti = kwargs['ti']
+        df_new = ti.xcom_pull(task_ids='create_today')
+
+        connection = lib.create_connect(host=Variable.get('host_db'),
+                                        port=Variable.get('port_db'),
+                                        user=Variable.get('user_db'),
+                                        password=Variable.get('password_db'),
+                                        database=Variable.get('name_db'))
+
     try:
-        df_new = create_today(city, type)
+        if not airflow_mode:
+            df_new = create_today(city, type)
 
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            table_name = f"{city}_{type}"
+            table_name = f"t_{city}_{type}"
 
             for index, row in df_new.iterrows():
                 cursor.execute(f"""
