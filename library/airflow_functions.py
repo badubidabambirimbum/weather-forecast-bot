@@ -149,7 +149,7 @@ def update(city, type, connection=None, airflow_mode='False', **kwargs):
 
             for index, row in df_new.iterrows():
                 cursor.execute(f"""
-                        INSERT INTO {table_name} (
+                        INSERT INTO prom.{table_name} (
                                             date,
                                             day1,day2,day3,day4,day5,day6,day7,day8,day9,day10,
                                             night1,night2,night3,night4,night5,night6,night7,night8,night9,night10,
