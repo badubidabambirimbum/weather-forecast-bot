@@ -19,7 +19,7 @@ CITIES_URL = {
          "Ekaterinburg": 'https://yandex.ru/weather?lat=56.8380127&lon=60.59747314'}}
 
 
-def get_weather_forecast_Yandex(city, type, **kwargs):
+def get_weather_forecast_Yandex(city, type='Yandex', **kwargs):
     '''Получение данных с сайта Yandex'''
 
     city_url = CITIES_URL[type][city]
@@ -54,7 +54,7 @@ def get_weather_forecast_Yandex(city, type, **kwargs):
     return forecast_data
 
 
-def get_weather_forecast_GisMeteo(city, type, **kwargs):
+def get_weather_forecast_GisMeteo(city, type='GisMeteo', **kwargs):
     '''Получение данных с сайта GisMeteo'''
 
     city_url = CITIES_URL[type][city]
