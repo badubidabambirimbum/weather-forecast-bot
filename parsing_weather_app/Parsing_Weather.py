@@ -384,6 +384,6 @@ if __name__ == "__main__":
     else:
         log.critical("refused to connect")
         msg_error_connect()
-        app.quit()
+        sys.exit('refused to connect')
 
     sys.exit(app.exec_())
