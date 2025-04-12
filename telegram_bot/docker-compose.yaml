@@ -6,7 +6,7 @@
 
 x-airflow-common:
   &airflow-common
-  image: apache/airflow:2.8.1-python3.10
+  image: apache/airflow:2.10.5-python3.10
   environment:
     &airflow-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -17,33 +17,33 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
   volumes:
-    - ./dags:/opt/airflow/dags
-    - ./logs:/opt/airflow/logs
-    - ./plugins:/opt/airflow/plugins
+    - ./../AirFlow/dags:/opt/airflow/dags
+    - ./../AirFlow/logs:/opt/airflow/logs
+    - ./../AirFlow/plugins:/opt/airflow/plugins
   networks:
       - telegram_bot_network
   depends_on:
-    - database
-
-services:
-  telegram_bot:
-    image: badubidabambirimbum/telegram_bot_image
-    container_name: telegram_bot
-    volumes:
-      - ./secret:/app/secret
-    networks:
-      - telegram_bot_network
-    restart: unless-stopped
-    depends_on:
       - database
 
+services:
+#  telegram_bot:
+#    image: badubidabambirimbum/telegram_bot_image
+#    container_name: telegram_bot
+#    volumes:
+#      - ./secret:/app/secret
+#    networks:
+#      - telegram_bot_network
+#    restart: unless-stopped
+#    depends_on:
+#      - database
+
   database:
-    image: badubidabambirimbum/postgres
+    image: postgres
     container_name: database
     environment:
-      - POSTGRES_DB: ${POSTGRES_DB}
-      - POSTGRES_USER: ${POSTGRES_USER}
-      - POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ./psql:/var/lib/postgresql/data
       - ./secret/init:/docker-entrypoint-initdb.d
@@ -52,6 +52,10 @@ services:
     ports:
       - 54321:5432
     restart: unless-stopped
+#    healthcheck:
+#      test: ["CMD", "pg_isready", "-U", "tg_bot"]
+#      interval: 5s
+#      retries: 5
 
   airflow-init:
     <<: *airflow-common
@@ -69,12 +73,18 @@ services:
       - "7777:8080"
     command: webserver
     restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
 
   scheduler:
     <<: *airflow-common
     container_name: airflow-scheduler
     command: scheduler
     restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
 
 networks:
   telegram_bot_network:
