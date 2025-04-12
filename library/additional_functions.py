@@ -67,7 +67,8 @@ def create_new_day(city:str, type:str, year:int, month:int, day:int, list_days:l
 def view(city, type, connection, schema='prom', key="tail", OrderBy_column='date'):
     '''Просмотр таблицы по городу и сайту'''
 
-    table_name = f"t_{city}_{type}"
+    # table_name = f"t_{city}_{type}"
+    table_name = f"{city}_{type}"
 
     query = f"SELECT * FROM {schema}.{table_name} order by {OrderBy_column};"  # SQL-запрос
 

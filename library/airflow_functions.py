@@ -89,7 +89,7 @@ def get_weather_forecast_GisMeteo(city, type, **kwargs):
     return forecast_data
 
 
-def create_today(city, type, airflow_mode='False', today=datetime.now().strftime('%Y-%m-%d'), **kwargs):
+def create_today(city, type, airflow_mode=False, today=datetime.now().strftime('%Y-%m-%d'), **kwargs):
     '''Создание таблицы из одной строки с подгруженными данными'''
 
     if airflow_mode:
@@ -102,7 +102,7 @@ def create_today(city, type, airflow_mode='False', today=datetime.now().strftime
         elif type == "GisMeteo":
             forecast_data = get_weather_forecast_GisMeteo(city, type)
         else:
-            raise "TypeError"
+            raise TypeError("TypeError")
 
     max_temps = [data['max_temp'] for data in forecast_data]
     min_temps = [data['min_temp'] for data in forecast_data]
@@ -125,7 +125,7 @@ def create_today(city, type, airflow_mode='False', today=datetime.now().strftime
     return df
 
 
-def update(city, type, connection=None, airflow_mode='False', **kwargs):
+def update(city, type, connection=None, airflow_mode=False, **kwargs):
     '''Обновление таблицы по указанному городу и сайту'''
 
     if airflow_mode:
@@ -145,11 +145,13 @@ def update(city, type, connection=None, airflow_mode='False', **kwargs):
             df_new = create_today(city, type)
 
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            table_name = f"t_{city}_{type}"
+            # table_name = f"t_{city}_{type}"
+            table_name = f"{city}_{type}"
 
             for index, row in df_new.iterrows():
                 cursor.execute(f"""
-                        INSERT INTO prom.{table_name} (
+                        --INSERT INTO prom.{table_name} (
+                        INSERT INTO {table_name} (
                                             date,
                                             day1,day2,day3,day4,day5,day6,day7,day8,day9,day10,
                                             night1,night2,night3,night4,night5,night6,night7,night8,night9,night10,
@@ -160,4 +162,6 @@ def update(city, type, connection=None, airflow_mode='False', **kwargs):
         connection.commit()
     except Exception as e:
         connection.rollback()
-        raise f"update ERROR!\n{e}"
+        raise ValueError(f"update ERROR! {e}")
+
+    
