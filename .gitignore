@@ -8,3 +8,4 @@ venv
 .conda
 output.log
 telegram_bot/secret
+logs
