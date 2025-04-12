@@ -24,11 +24,11 @@ dp = Dispatcher(bot)
 
 scheduler_async = AsyncIOScheduler()
 
-connection, connect_text = lib.create_connect(host=s.host,
+connection, connect_text = lib.create_connect(host=s.docker_host,
                                               port=s.port,
-                                              user=s.user,
-                                              password=s.password,
-                                              database=s.database)
+                                              user=s.user_tg,
+                                              password=s.password_tg,
+                                              database=s.database_tg)
 
 
 # Загрузка обновлений в таблицу
