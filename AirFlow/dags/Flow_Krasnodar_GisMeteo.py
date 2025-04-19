@@ -12,11 +12,11 @@ from airflow.models import Variable
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..', 'library')))
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', 'library')))
 
-import additional_functions as lib
 import airflow_functions as afl
 
+local_tz = timezone("Europe/Moscow")
 
 def notify_telegram_failure(context):
     message = (
@@ -47,15 +47,15 @@ default_args = {
 
 dag = DAG(
     dag_id='Krasnodar_GisMeteo',
-    start_date=datetime(2025, 3, 1),
+    start_date=datetime(2025, 4, 20, tzinfo=local_tz),
     schedule_interval="20 5 * * *",
     default_args=default_args,
     catchup=False,
-    timezone=timezone("Europe/Moscow"),
+    is_paused_upon_creation=True,
     tags=['Krasnodar', 'GisMeteo'],
     params={'table': 't_krasnodar_gismeteo',
-            'city': 'krasnodar',
-            'type': 'gismeteo'}
+            'city': 'Krasnodar',
+            'type': 'GisMeteo'}
 )
 
 
@@ -84,7 +84,8 @@ truncate_table = PostgresOperator(
     task_id='truncate_backup_table',
     postgres_conn_id='database_connect',
     doc="TRUNCATE backup таблицы",
-    sql='''TRUNCATE TABLE IF EXISTS backup.{{ params.table }}'''
+    sql='''TRUNCATE TABLE backup.{{ params.table }}''',
+    dag=dag
 )
 
 insert_table = PostgresOperator(
@@ -92,7 +93,8 @@ insert_table = PostgresOperator(
     postgres_conn_id='database_connect',
     doc="Заполнение backup таблицы",
     sql='''INSERT INTO backup.{{ params.table }}
-            SELECT * FROM prom.{{ params.table }}'''
+            SELECT * FROM prom.{{ params.table }}''',
+    dag=dag
 )
 
 update_table = PythonOperator(

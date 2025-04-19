@@ -2,11 +2,13 @@
 # 1. Создать .env файл и записать туда все переменные, которые тут используются - ${}
 # 2. Создать папку init и в ней создать SQL файл, в котором создается пользователь и БД для AirFlow
 #    Данный SQL скрипт выполнится при первом поднятии контейнера database
-# Запуск: docker-compose --env-file /secret/secret.env up
+# Запуск: docker-compose --env-file ./secret/secret.env up
 
 x-airflow-common:
   &airflow-common
-  image: apache/airflow:2.10.5-python3.10
+  build:
+    context: .
+    dockerfile: Dockerfile.airflow
   environment:
     &airflow-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -20,22 +22,25 @@ x-airflow-common:
     - ./../AirFlow/dags:/opt/airflow/dags
     - ./../AirFlow/logs:/opt/airflow/logs
     - ./../AirFlow/plugins:/opt/airflow/plugins
+    - ./../library/:/opt/library
   networks:
       - telegram_bot_network
   depends_on:
       - database
 
 services:
-#  telegram_bot:
-#    image: badubidabambirimbum/telegram_bot_image
-#    container_name: telegram_bot
-#    volumes:
-#      - ./secret:/app/secret
-#    networks:
-#      - telegram_bot_network
-#    restart: unless-stopped
-#    depends_on:
-#      - database
+  telegram_bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telegram_bot
+    volumes:
+      - ./secret:/app/secret
+    networks:
+      - telegram_bot_network
+    restart: unless-stopped
+    depends_on:
+      - database
 
   database:
     image: postgres
@@ -52,10 +57,6 @@ services:
     ports:
       - 54321:5432
     restart: unless-stopped
-#    healthcheck:
-#      test: ["CMD", "pg_isready", "-U", "tg_bot"]
-#      interval: 5s
-#      retries: 5
 
   airflow-init:
     <<: *airflow-common

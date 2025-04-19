@@ -1,3 +1,5 @@
+import time
+
 from aiogram import Bot, types, Dispatcher, executor
 
 import secret.auth_data as s  # API KEY, ADMIN ID, LOG ID, ...
@@ -18,6 +20,8 @@ import additional_functions as lib
 import airflow_functions as afl
 from telegram_constants import WEATHER_YANDEX_SMILE, WEATHER_GISMETEO_SMILE, WEATHER_GISMETEO_EXCEPTIONS, SET_CITIES, SET_TYPES, TRANSLATE_CITIES
 
+
+time.sleep(100)
 
 bot = Bot(s.token)
 dp = Dispatcher(bot)

@@ -12,11 +12,11 @@ from airflow.models import Variable
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..', 'library')))
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', 'library')))
 
-import additional_functions as lib
 import airflow_functions as afl
 
+local_tz = timezone("Europe/Moscow")
 
 def notify_telegram_failure(context):
     message = (
@@ -39,7 +39,7 @@ default_args = {
     'owner': '@CHAO',                                   # Указывает владельца задачи
     'depends_on_past': False,                           # Если False, задача не зависит от успешного выполнения своего предыдущего запуска
     'retries': 1,                                       # Количество попыток перезапуска задачи в случае её падения
-    'retry_delay': timedelta(minutes=30),               # Время ожидания между повторными попытками (5 минут).
+    'retry_delay': timedelta(minutes=5),               # Время ожидания между повторными попытками (5 минут).
     'on_failure_callback': notify_telegram_failure      # Функция notify_telegram_failure, которая будет вызвана при неудачном выполнении задачи
 }
 
@@ -47,15 +47,15 @@ default_args = {
 
 dag = DAG(
     dag_id='Moscow_GisMeteo',
-    start_date=datetime(2025, 3, 1),
+    start_date=datetime(2025, 4, 20, tzinfo=local_tz),
     schedule_interval="10 5 * * *",
     default_args=default_args,
     catchup=False,
-    timezone=timezone("Europe/Moscow"),
+    is_paused_upon_creation=True,
     tags=['Moscow', 'GisMeteo'],
     params={'table': 't_moscow_gismeteo',
-            'city': 'moscow',
-            'type': 'gismeteo'}
+            'city': 'Moscow',
+            'type': 'GisMeteo'}
 )
 
 
@@ -84,7 +84,8 @@ truncate_table = PostgresOperator(
     task_id='truncate_backup_table',
     postgres_conn_id='database_connect',
     doc="TRUNCATE backup таблицы",
-    sql='''TRUNCATE TABLE IF EXISTS backup.{{ params.table }}'''
+    sql='''TRUNCATE TABLE backup.{{ params.table }}''',
+    dag=dag
 )
 
 insert_table = PostgresOperator(
@@ -92,7 +93,8 @@ insert_table = PostgresOperator(
     postgres_conn_id='database_connect',
     doc="Заполнение backup таблицы",
     sql='''INSERT INTO backup.{{ params.table }}
-            SELECT * FROM prom.{{ params.table }}'''
+            SELECT * FROM prom.{{ params.table }}''',
+    dag=dag
 )
 
 update_table = PythonOperator(

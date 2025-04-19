@@ -54,7 +54,7 @@ def get_weather_forecast_Yandex(city, type='Yandex', **kwargs):
     return forecast_data
 
 
-def get_weather_forecast_GisMeteo(city, type='GisMeteo', **kwargs):
+def get_weather_forecast_GisMeteo(city, type, **kwargs):
     '''Получение данных с сайта GisMeteo'''
 
     city_url = CITIES_URL[type][city]
@@ -124,6 +124,46 @@ def create_today(city, type, airflow_mode=False, today=datetime.now().strftime('
 
     return df
 
+def create_new_day(city:str, type:str, year:int, month:int, day:int, list_days:list, list_nights:list, list_weathers:list, connection, schema='prom'):
+    '''Ручное добавление одного дня по указанному городу и сайту'''
+
+    date = datetime(year, month, day)
+    date = date.strftime('%Y-%m-%d')
+
+    data = {'date': [date]}
+
+    for i in range(10):
+        data[f'day{i + 1}'] = int(list_days[i])
+
+    for i in range(10):
+        data[f'night{i + 1}'] = int(list_nights[i])
+
+    for i in range(10):
+        data[f'weather{i + 1}'] = list_weathers[i]
+
+    df = pd.DataFrame(data)
+    df.set_index('date', inplace=True)
+
+    try:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            table_name = f"t_{city}_{type}"
+
+            for index, row in df.iterrows():
+                cursor.execute(f"""
+                        INSERT INTO {schema}.{table_name} (
+                                            date,
+                                            day1,day2,day3,day4,day5,day6,day7,day8,day9,day10,
+                                            night1,night2,night3,night4,night5,night6,night7,night8,night9,night10,
+                                            weather1,weather2,weather3,weather4,weather5,weather6,weather7,weather8,weather9,weather10)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    """, (index, *tuple(row)))
+        # Сохранение изменений
+        connection.commit()
+
+        print(f"{city} {type} GOOD!")
+    except Exception as e:
+        raise ValueError(f"{city} {type} ERROR!\n{e}")
+
 
 def update(city, type, connection=None, airflow_mode=False, **kwargs):
     '''Обновление таблицы по указанному городу и сайту'''
@@ -132,9 +172,9 @@ def update(city, type, connection=None, airflow_mode=False, **kwargs):
         from airflow.models import Variable
 
         ti = kwargs['ti']
-        df_new = ti.xcom_pull(task_ids='create_today')
+        df_new = ti.xcom_pull(task_ids='create_DF')
 
-        connection = lib.create_connect(host=Variable.get('host_db'),
+        connection, _ = lib.create_connect(host=Variable.get('host_db'),
                                         port=Variable.get('port_db'),
                                         user=Variable.get('user_db'),
                                         password=Variable.get('password_db'),
@@ -145,13 +185,11 @@ def update(city, type, connection=None, airflow_mode=False, **kwargs):
             df_new = create_today(city, type)
 
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            # table_name = f"t_{city}_{type}"
-            table_name = f"{city}_{type}"
+            table_name = f"t_{city}_{type}"
 
             for index, row in df_new.iterrows():
                 cursor.execute(f"""
-                        --INSERT INTO prom.{table_name} (
-                        INSERT INTO {table_name} (
+                        INSERT INTO prom.{table_name} (
                                             date,
                                             day1,day2,day3,day4,day5,day6,day7,day8,day9,day10,
                                             night1,night2,night3,night4,night5,night6,night7,night8,night9,night10,
