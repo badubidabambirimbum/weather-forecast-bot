@@ -12,11 +12,12 @@ from airflow.models import Variable
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', 'library')))
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 
-import airflow_functions as afl
+import library.airflow_functions as afl
 
 local_tz = timezone("Europe/Moscow")
+schedule = Variable.get("schedule_Krasnodar_Yandex")
 
 def notify_telegram_failure(context):
     message = (
@@ -46,16 +47,16 @@ default_args = {
 
 
 dag = DAG(
-    dag_id='Ekaterinburg_GisMeteo',
+    dag_id='Krasnodar_Yandex',
     start_date=datetime(2025, 4, 20, tzinfo=local_tz),
-    schedule_interval="30 5 * * *",
+    schedule_interval=schedule,
     default_args=default_args,
     catchup=False,
     is_paused_upon_creation=True,
-    tags=['Ekaterinburg', 'GisMeteo'],
-    params={'table': 't_ekaterinburg_gismeteo',
-            'city': 'Ekaterinburg',
-            'type': 'GisMeteo'}
+    tags=['Krasnodar', 'Yandex'],
+    params={'table': 't_krasnodar_yandex',
+            'city': 'Krasnodar',
+            'type': 'Yandex'}
 )
 
 
@@ -63,7 +64,7 @@ start = DummyOperator(task_id='start')
 
 get_weather_forecast = PythonOperator(
     task_id='get_weather_forecast',
-    python_callable=afl.get_weather_forecast_GisMeteo,
+    python_callable=afl.get_weather_forecast_Yandex,
     op_kwargs={'city': "{{ params.city }}",
                'type': "{{ params.type }}"},
     doc="Получение данных с сайта",

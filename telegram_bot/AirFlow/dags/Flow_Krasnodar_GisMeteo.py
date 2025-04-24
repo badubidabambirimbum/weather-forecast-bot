@@ -12,11 +12,12 @@ from airflow.models import Variable
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', 'library')))
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 
-import airflow_functions as afl
+import library.airflow_functions as afl
 
 local_tz = timezone("Europe/Moscow")
+schedule = Variable.get("schedule_Krasnodar_GisMeteo")
 
 def notify_telegram_failure(context):
     message = (
@@ -48,7 +49,7 @@ default_args = {
 dag = DAG(
     dag_id='Krasnodar_GisMeteo',
     start_date=datetime(2025, 4, 20, tzinfo=local_tz),
-    schedule_interval="20 5 * * *",
+    schedule_interval=schedule,
     default_args=default_args,
     catchup=False,
     is_paused_upon_creation=True,
