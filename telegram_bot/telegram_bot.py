@@ -6,7 +6,6 @@ import secret.auth_data as s  # API KEY, ADMIN ID, LOG ID, ...
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from Keyboards import kb, kb_help, kb_cities, ikb_info
 from datetime import datetime
-import pandas as pd
 import asyncio
 from psycopg2.extras import RealDictCursor
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -14,11 +13,12 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import sys
 import os
 
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', 'library')))
+# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', 'library')))
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 
-import additional_functions as lib
-import airflow_functions as afl
-from telegram_constants import WEATHER_YANDEX_SMILE, WEATHER_GISMETEO_SMILE, WEATHER_GISMETEO_EXCEPTIONS, SET_CITIES, SET_TYPES, TRANSLATE_CITIES
+import library.additional_functions as lib
+import library.airflow_functions as afl
+from library.telegram_constants import WEATHER_YANDEX_SMILE, WEATHER_GISMETEO_SMILE, WEATHER_GISMETEO_EXCEPTIONS, SET_CITIES, SET_TYPES, TRANSLATE_CITIES
 
 
 time.sleep(100)
@@ -58,7 +58,7 @@ async def update_dataset(city=None, type=None):
             afl.update(city, type, connection)
             await bot.send_message(s.log_id, text=f"✅ {city} {type}", parse_mode='HTML')
         except Exception as e:
-            await bot.send_message(s.log_id, text=f"❌ {city} {type}\n{{e}}", parse_mode='HTML')
+            await bot.send_message(s.log_id, text=f"❌ {city} {type}\n{e}", parse_mode='HTML')
 
 
 # Отправка прогноза подписчикам
@@ -69,7 +69,7 @@ async def scheduled_notification():
         rows = cursor.fetchall()
     for row in rows:
         try:
-            await bot.send_message(row["id"], text=lib.create_forecast(row["city"], 1, 1), parse_mode='HTML')
+            await bot.send_message(row["id"], text=lib.create_forecast(row["city"], 1, 1, connection), parse_mode='HTML')
         except Exception as e:
             await bot.send_message(chat_id=s.log_id,
                                    text=f"❌ Не удалось отправить сообщение пользователю {row['id']}: {e}",
@@ -430,7 +430,7 @@ async def callback_message(callback: types.CallbackQuery):
     await callback.message.delete_reply_markup()
     city, dist = callback.data.split()
     await bot.send_message(callback.from_user.id, text=f'Прогноз в городе {city} на {dist} дней:')
-    await bot.send_message(callback.from_user.id, text=lib.create_forecast(city, dist, 10), parse_mode='HTML')
+    await bot.send_message(callback.from_user.id, text=lib.create_forecast(city, dist, 10, connection), parse_mode='HTML')
 
 
 if __name__ == "__main__":

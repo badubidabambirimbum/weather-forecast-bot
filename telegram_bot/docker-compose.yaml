@@ -19,10 +19,10 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
   volumes:
-    - ./../AirFlow/dags:/opt/airflow/dags
-    - ./../AirFlow/logs:/opt/airflow/logs
-    - ./../AirFlow/plugins:/opt/airflow/plugins
-    - ./../library/:/opt/library
+    - ./AirFlow/dags:/opt/airflow/dags
+    - ./AirFlow/logs:/opt/airflow/logs
+    - ./AirFlow/plugins:/opt/airflow/plugins
+    - ./library/:/opt/library
   networks:
       - telegram_bot_network
   depends_on:
