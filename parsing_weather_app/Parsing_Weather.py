@@ -6,12 +6,12 @@ import sys
 from pandasModel import pandasModel
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', 'library')))
-from telegram_constants import *
-import additional_functions as lib
-import airflow_functions as afl
-import logger as mylogger
-from telegram_bot.secret.auth_data import *
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', 'telegram_bot')))
+from library.telegram_constants import *
+import library.additional_functions as lib
+import library.airflow_functions as afl
+import library.logger as mylogger
+from secret.auth_data import *
 
 
 def msg_error_():
@@ -169,14 +169,14 @@ def on_click_rd_Moscow():
         msg_error_website()
     elif ui.radioButton.isChecked():
         try:
-            model = pandasModel(lib.view("Moscow", "GisMeteo", connection=connect, schema='public', key="all"))
+            model = pandasModel(lib.view("Moscow", "GisMeteo", connection=connect, schema='prom', key="all"))
             ui.tableView.setModel(model)
         except Exception as e:
             log.error(e)
             msg_error_view()
     elif ui.radioButton_2.isChecked():
         try:
-            model = pandasModel(lib.view("Moscow", "Yandex", connection=connect, schema='public', key="all"))
+            model = pandasModel(lib.view("Moscow", "Yandex", connection=connect, schema='prom', key="all"))
             ui.tableView.setModel(model)
         except Exception as e:
             log.error(e)
@@ -188,14 +188,14 @@ def on_click_rd_Krasnodar():
         msg_error_website()
     elif ui.radioButton.isChecked():
         try:
-            model = pandasModel(lib.view("Krasnodar", "GisMeteo", connection=connect, schema='public', key="all"))
+            model = pandasModel(lib.view("Krasnodar", "GisMeteo", connection=connect, schema='prom', key="all"))
             ui.tableView.setModel(model)
         except Exception as e:
             print(e)
             msg_error_view()
     elif ui.radioButton_2.isChecked():
         try:
-            model = pandasModel(lib.view("Krasnodar", "Yandex", connection=connect, schema='public', key="all"))
+            model = pandasModel(lib.view("Krasnodar", "Yandex", connection=connect, schema='prom', key="all"))
             ui.tableView.setModel(model)
         except Exception as e:
             print(e)
@@ -207,14 +207,14 @@ def on_click_rd_Ekaterinburg():
         msg_error_website()
     elif ui.radioButton.isChecked():
         try:
-            model = pandasModel(lib.view("Ekaterinburg", "GisMeteo", connection=connect, schema='public', key="all"))
+            model = pandasModel(lib.view("Ekaterinburg", "GisMeteo", connection=connect, schema='prom', key="all"))
             ui.tableView.setModel(model)
         except Exception as e:
             log.error(e)
             msg_error_view()
     elif ui.radioButton_2.isChecked():
         try:
-            model = pandasModel(lib.view("Ekaterinburg", "Yandex", connection=connect, schema='public', key="all"))
+            model = pandasModel(lib.view("Ekaterinburg", "Yandex", connection=connect, schema='prom', key="all"))
             ui.tableView.setModel(model)
         except Exception as e:
             log.error(e)
@@ -228,21 +228,21 @@ def on_click_rd_Yandex():
 
     if ui.radioButton_3.isChecked():
         try:
-            model = pandasModel(lib.view("Moscow", "Yandex", connection=connect, schema='public', key="all"))
+            model = pandasModel(lib.view("Moscow", "Yandex", connection=connect, schema='prom', key="all"))
             ui.tableView.setModel(model)
         except Exception as e:
             log.error(e)
             msg_error_view()
     elif ui.radioButton_4.isChecked():
         try:
-            model = pandasModel(lib.view("Krasnodar", "Yandex", connection=connect, schema='public', key="all"))
+            model = pandasModel(lib.view("Krasnodar", "Yandex", connection=connect, schema='prom', key="all"))
             ui.tableView.setModel(model)
         except Exception as e:
             log.error(e)
             msg_error_view()
     elif ui.radioButton_5.isChecked():
         try:
-            model = pandasModel(lib.view("Ekaterinburg", "Yandex", connection=connect, schema='public', key="all"))
+            model = pandasModel(lib.view("Ekaterinburg", "Yandex", connection=connect, schema='prom', key="all"))
             ui.tableView.setModel(model)
         except Exception as e:
             log.error(e)
@@ -256,21 +256,21 @@ def on_click_rd_GisMeteo():
 
     if ui.radioButton_3.isChecked():
         try:
-            model = pandasModel(lib.view("Moscow", "GisMeteo", connection=connect, schema='public', key="all"))
+            model = pandasModel(lib.view("Moscow", "GisMeteo", connection=connect, schema='prom', key="all"))
             ui.tableView.setModel(model)
         except Exception as e:
             log.error(e)
             msg_error_view()
     elif ui.radioButton_4.isChecked():
         try:
-            model = pandasModel(lib.view("Krasnodar", "GisMeteo", connection=connect, schema='public', key="all"))
+            model = pandasModel(lib.view("Krasnodar", "GisMeteo", connection=connect, schema='prom', key="all"))
             ui.tableView.setModel(model)
         except Exception as e:
             print(e)
             msg_error_view()
     elif ui.radioButton_5.isChecked():
         try:
-            model = pandasModel(lib.view("Ekaterinburg", "GisMeteo", connection=connect, schema='public', key="all"))
+            model = pandasModel(lib.view("Ekaterinburg", "GisMeteo", connection=connect, schema='prom', key="all"))
             ui.tableView.setModel(model)
         except Exception as e:
             log.error(e)
@@ -314,7 +314,7 @@ def on_click_OK():
             else:
                 city = "Ekaterinburg"
 
-            lib.create_new_day(city, type, Year, Month, Day, list_days, list_nights, list_weathers, connect, 'public')
+            afl.create_new_day(city, type, Year, Month, Day, list_days, list_nights, list_weathers, connect, 'prom')
             msg_good_add_day()
             Add_Day_window.close()
         except Exception as e:
@@ -338,7 +338,7 @@ if __name__ == "__main__":
     # table = table()
     log = mylogger.Logger().get_logger()
 
-    connect, _ = lib.create_connect(external_host, port, user, password, database)
+    connect, _ = lib.create_connect(external_host, external_port, user, password, database)
 
     WEATHERS_GISMETEO = WEATHER_GISMETEO_SMILE.keys()
     WEATHERS_YANDEX = WEATHER_YANDEX_SMILE.keys()
