@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
 from psycopg2.extras import RealDictCursor
-import additional_functions as lib
+import library.additional_functions as lib
 
 import asyncio
 

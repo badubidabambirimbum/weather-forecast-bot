@@ -2,8 +2,7 @@ import pandas as pd
 from datetime import datetime
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from telegram_constants import *
-
+from library.telegram_constants import *
 
 def create_connect(host, port, user, password, database):
     '''Подключение к базе данных'''
