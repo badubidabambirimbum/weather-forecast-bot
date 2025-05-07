@@ -2,7 +2,7 @@ FROM python:3.11
 
 RUN apt-get update
 
-WORKDIR /telegram_bot
+WORKDIR /app
 
 COPY . .
 

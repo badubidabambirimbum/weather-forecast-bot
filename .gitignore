@@ -1,12 +1,11 @@
-.conda
 /.idea
-/.ipynb_checkpoints
-__pycache__/
+.ipynb_checkpoints
+__pycache__
 parsing.ipynb
 venv
 .vscode
 .DS_Store
+.conda
 output.log
-telegram_bot/auth_data.py
-telegram_bot/users_data
 telegram_bot/secret
+logs
