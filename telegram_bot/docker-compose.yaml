@@ -43,7 +43,7 @@ services:
       - database
 
   database:
-    image: postgres
+    image: postgres:17
     container_name: database
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
