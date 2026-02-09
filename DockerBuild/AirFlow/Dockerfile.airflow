@@ -1,0 +1,12 @@
+FROM apache/airflow:2.10.3
+
+ENV TZ=Europe/Moscow
+
+RUN pip install 'apache-airflow[postgres]'
+RUN pip install apache-airflow-providers-telegram
+
+COPY ../../secret/variables.json /opt/airflow/variables.json
+COPY init_airflow/connections.sh /opt/airflow/connections.sh
+
+RUN airflow variables import /opt/airflow/variables.json
+RUN chmod +x /opt/airflow/connections.sh && /opt/airflow/connections.sh

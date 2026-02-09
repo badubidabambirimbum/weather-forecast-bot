@@ -1,0 +1,100 @@
+# Для корректного запуска этого docker-compose файла требуется в папке secret:
+# 1. Создать .env файл и записать туда все переменные, которые тут используются - ${}
+# 2. Создать папку init и в ней создать SQL файл, в котором создается пользователь и БД для AirFlow
+#    Данный SQL скрипт выполнится при первом поднятии контейнера database
+# Запуск: docker-compose --env-file ./app/secret/secret.env up
+
+#x-airflow-common:
+#  &airflow-common
+#  DockerBuild:
+#    context: ./DockerBuild/AirFlow
+#    dockerfile: Dockerfile.airflow
+#  environment:
+#    &airflow-env
+#    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+#    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER_airflow}:${POSTGRES_PASSWORD_airflow}@database:5432/${POSTGRES_DB_airflow}
+#    AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+#    AIRFLOW__WEBSERVER__WEB_SERVER_PORT: 8080
+#    AIRFLOW__CORE__FERNET_KEY: ''
+#    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
+#    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+#  volumes:
+#    - ./AirFlow/dags:/opt/airflow/dags
+#    - ./AirFlow/logs:/opt/airflow/logs
+#    - ./AirFlow/plugins:/opt/airflow/plugins
+#    - ./library/:/opt/library
+#  networks:
+#      - telegram_bot_network
+#  depends_on:
+#      - database
+
+services:                                                   # Раздел, в котором перечисляются все сервисы (контейнеры), которые будет запускать Docker Compose.
+  telegram_bot:                                             # Имя сервиса. Так он будет называться внутри docker-compose (например, в сетях и зависимостях).
+    build:                                                  # Указывает, что контейнер нужно собрать из Dockerfile, а не просто скачать готовый образ.
+      context: .                                            # Контекст сборки — текущая папка (.). Docker будет видеть все файлы из этой директории при сборке.
+      dockerfile: DockerBuild/TelegramBot/Dockerfile.tg     # Путь к Dockerfile, который нужно использовать для сборки образа.
+    container_name: app                                     # Явное имя контейнера. Без этого Docker сгенерировал бы имя автоматически.
+    volumes:                                                # Позволяет контейнеру читать/изменять файлы на хосте.
+      - ./app/secret:/app/secret
+    networks:                                               # Подключает контейнер к сети telegram_bot_network, чтобы он мог общаться с другими контейнерами в этой сети.
+      - telegram_bot_network
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+
+  database:
+    image: postgres:17
+    container_name: database
+    environment:                                            # Переменные окружения, передаваемые контейнеру.
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./psql:/var/lib/postgresql/data
+      - ./DockerBuild/PostgreSQL/init_sql_scripts:/docker-entrypoint-initdb.d # Скрипты SQL из этой папки автоматически выполняются при первой инициализации базы.
+    networks:
+      - telegram_bot_network
+    ports:
+      - 54321:5432
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+#  airflow-init:
+#    <<: *airflow-common
+#    container_name: airflow-init
+#    entrypoint: >
+#      bash -c "
+#      airflow db init &&
+#      airflow users create --username ${AIRFLOW_USER} --firstname ${AIRFLOW_FIRSTNAME} --lastname ${AIRFLOW_LASTNAME} --role ${AIRFLOW_ROLE} --email ${AIRFLOW_EMAIL} --password ${AIRFLOW_PASSWORD}
+#      "
+#
+#  webserver:
+#    <<: *airflow-common
+#    container_name: airflow-webserver
+#    ports:
+#      - "8080:8080"
+#    command: webserver
+#    restart: unless-stopped
+#    depends_on:
+#      airflow-init:
+#        condition: service_completed_successfully
+#
+#  scheduler:
+#    <<: *airflow-common
+#    container_name: airflow-scheduler
+#    command: scheduler
+#    restart: unless-stopped
+#    depends_on:
+#      airflow-init:
+#        condition: service_completed_successfully
+
+networks:
+  telegram_bot_network:
+    name: telegram_bot_network
+

@@ -1,0 +1,9 @@
+aiogram==2.25.2
+APScheduler==3.10.4
+beautifulsoup4==4.12.3
+bs4==0.0.2
+numpy==2.1.1
+pandas==2.2.2
+psycopg2==2.9.10
+requests==2.32.3
+python-dotenv==1.1.1
