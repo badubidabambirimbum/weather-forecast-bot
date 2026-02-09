@@ -59,11 +59,11 @@ services:                                                   # Раздел, в �
       - 54321:5432
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ] # команда проверки
+      interval: 10s                                                             # как часто проверять
+      timeout: 10s                                                              # сколько ждать ответа
+      retries: 10                                                               # сколько неудачных попыток до статуса unhealthy
+      start_period: 30s                                                         # время на запуск базы перед проверками
 
 #  airflow-init:
 #    <<: *airflow-common
