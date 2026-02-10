@@ -39,5 +39,6 @@ class Logger:
 
             self.logger.addHandler(file_handler)
 
-    def get_logger(self):
+    @property
+    def logger(self):
         return self.logger

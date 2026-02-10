@@ -11,3 +11,4 @@ app/secret/auth_data.py
 logs
 psql
 *.env
+test.ipynb
