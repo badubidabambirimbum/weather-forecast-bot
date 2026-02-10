@@ -8,6 +8,9 @@ import re
 
 import asyncio
 
+from test import columns_list
+
+from app.library.database import DataBase
 
 CITIES_URL = {
     "GisMeteo":
@@ -215,7 +218,7 @@ def create_today(city, type, airflow_mode=False, today=datetime.now().strftime('
 
     return df
 
-def create_new_day(city:str, type:str, year:int, month:int, day:int, list_days:list, list_nights:list, list_weathers:list, connection, schema='prom'):
+def create_new_day(city:str, type:str, year:int, month:int, day:int, list_days:list, list_nights:list, list_weathers:list, db, schema='prom'):
     '''Ручное добавление одного дня по указанному городу и сайту'''
 
     date = datetime(year, month, day)
@@ -235,28 +238,19 @@ def create_new_day(city:str, type:str, year:int, month:int, day:int, list_days:l
     df = pd.DataFrame(data)
     df.set_index('date', inplace=True)
 
-    try:
-        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            table_name = f"t_{city}_{type}"
+    table_name = f"t_{city}_{type}"
+    columns_weather_list = [
+        "date",
+        "day1", "day2", "day3", "day4", "day5", "day6", "day7", "day8", "day9", "day10",
+        "night1", "night2", "night3", "night4", "night5", "night6", "night7", "night8", "night9", "night10",
+        "weather1", "weather2", "weather3", "weather4", "weather5", "weather6", "weather7", "weather8", "weather9", "weather10"
+    ]
 
-            for index, row in df.iterrows():
-                cursor.execute(f"""
-                        INSERT INTO {schema}.{table_name} (
-                                            date,
-                                            day1,day2,day3,day4,day5,day6,day7,day8,day9,day10,
-                                            night1,night2,night3,night4,night5,night6,night7,night8,night9,night10,
-                                            weather1,weather2,weather3,weather4,weather5,weather6,weather7,weather8,weather9,weather10)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """, (index, *tuple(row)))
-        # Сохранение изменений
-        connection.commit()
-
-        print(f"{city} {type} GOOD!")
-    except Exception as e:
-        raise ValueError(f"{city} {type} ERROR!\n{e}")
+    for row in df.itertuples(index=True, name=None):
+        db.insert(schema=schema, table_name=table_name, columns_list=columns_weather_list, data=row)
 
 
-def update(city, type, connection=None, airflow_mode=False, **kwargs):
+def update(city, type, db=None, airflow_mode=False, **kwargs):
     '''Обновление таблицы по указанному городу и сайту'''
 
     if airflow_mode:
@@ -265,32 +259,25 @@ def update(city, type, connection=None, airflow_mode=False, **kwargs):
         ti = kwargs['ti']
         df_new = ti.xcom_pull(task_ids='create_DF')
 
-        connection, _ = lib.create_connect(host=Variable.get('host_db'),
-                                        port=Variable.get('port_db'),
-                                        user=Variable.get('user_db'),
-                                        password=Variable.get('password_db'),
-                                        database=Variable.get('name_db'))
+        db = DataBase(host=Variable.get('host_db'),
+                      port=Variable.get('port_db'),
+                      user=Variable.get('user_db'),
+                      password=Variable.get('password_db'),
+                      database=Variable.get('name_db'))
 
-    try:
-        if not airflow_mode:
-            df_new = create_today(city, type)
+    if not airflow_mode:
+        df_new = create_today(city, type)
 
-        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            table_name = f"t_{city}_{type}"
+    table_name = f"t_{city}_{type}"
+    columns_weather_list = [
+        "date",
+        "day1", "day2", "day3", "day4", "day5", "day6", "day7", "day8", "day9", "day10",
+        "night1", "night2", "night3", "night4", "night5", "night6", "night7", "night8", "night9", "night10",
+        "weather1", "weather2", "weather3", "weather4", "weather5", "weather6", "weather7", "weather8", "weather9",
+        "weather10"
+    ]
 
-            for index, row in df_new.iterrows():
-                cursor.execute(f"""
-                        INSERT INTO prom.{table_name} (
-                                            date,
-                                            day1,day2,day3,day4,day5,day6,day7,day8,day9,day10,
-                                            night1,night2,night3,night4,night5,night6,night7,night8,night9,night10,
-                                            weather1,weather2,weather3,weather4,weather5,weather6,weather7,weather8,weather9,weather10)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """, (index, *tuple(row)))
-        # Сохранение изменений
-        connection.commit()
-    except Exception as e:
-        connection.rollback()
-        raise ValueError(f"update ERROR! {e}")
+    for row in df_new.itertuples(index=True, name=None):
+        db.insert(schema='prom', table_name=table_name, columns_list=columns_weather_list, data=row)
 
     

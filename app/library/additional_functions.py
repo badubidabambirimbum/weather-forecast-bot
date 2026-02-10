@@ -4,32 +4,17 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from library.telegram_constants import *
 
-def create_connect(host, port, user, password, database):
-    '''Подключение к базе данных'''
 
-    connection = None
-    try:
-        connection = psycopg2.connect(
-            host=host,
-            port=port,
-            user=user,
-            password=password,
-            database=database,
-        )
-        connect_text = f"✅ Подключение установлено!"
-    except Exception as ex:
-        connect_text = f"❌ Не удалось установить подключение {ex}!"
-
-    return connection, connect_text
-
-def view(city, type, connection, schema='prom', key="tail", OrderBy_column='date'):
+def view(city: str, type: str, db: DataBase, schema='prom', key="tail", OrderBy_column='date'):
     '''Просмотр таблицы по городу и сайту'''
 
     table_name = f"t_{city}_{type}"
+    query = f"SELECT * FROM {schema}.{table_name} order by {OrderBy_column};"
+    rows = db.execute_query(query)
 
-    query = f"SELECT * FROM {schema}.{table_name} order by {OrderBy_column};"  # SQL-запрос
-
-    df = pd.read_sql_query(query, connection)
+    # df = pd.read_sql_query(query, connection)
+    # df.set_index('date', inplace=True)
+    df = pd.DataFrame(rows)
     df.set_index('date', inplace=True)
 
     if key == "tail":
@@ -42,12 +27,12 @@ def view(city, type, connection, schema='prom', key="tail", OrderBy_column='date
         raise KeyError("key Error!")
 
 
-def create_forecast(city, dist, period, connection):
+def create_forecast(city, dist, period, db):
     '''формирование строки с прогнозом'''
 
-    forecast_Yandex = view(TRANSLATE_CITIES[city], "Yandex", connection, key='all').iloc[-1]
-    forecast_GisMeteo = view(TRANSLATE_CITIES[city], "GisMeteo", connection, key='all').iloc[-1]
-    date_forecast = view(TRANSLATE_CITIES[city], "GisMeteo", connection, key='all').index[-1]
+    forecast_Yandex = view(TRANSLATE_CITIES[city], "Yandex", db, key='all').iloc[-1]
+    forecast_GisMeteo = view(TRANSLATE_CITIES[city], "GisMeteo", db, key='all').iloc[-1]
+    date_forecast = view(TRANSLATE_CITIES[city], "GisMeteo", db, key='all').index[-1]
 
     future_dates = pd.date_range(start=date_forecast, periods=period)
     forecast_data = ""
@@ -76,25 +61,25 @@ def create_forecast(city, dist, period, connection):
 
     return forecast_data
 
-def backup(connection, tables=('prom.t_moscow_gismeteo',
-                               'prom.t_moscow_yandex',
-                               'prom.t_ekaterinburg_gismeteo',
-                               'prom.t_ekaterinburg_yandex',
-                               'prom.t_krasnodar_gismeteo',
-                               'prom.t_krasnodar_yandex',
-                               'prom.all_users',
-                               'prom.subscribers',
-                               'metrics.model_moscow',
-                               'metrics.model_krasnodar',
-                               'metrics.model_ekaterinburg',
-                               'predict.forecast_moscow',
-                               'predict.forecast_krasnodar',
-                               'predict.forecast_ekaterinburg')):
+def backup(db, tables=('prom.t_moscow_gismeteo',
+                       'prom.t_moscow_yandex',
+                       'prom.t_ekaterinburg_gismeteo',
+                       'prom.t_ekaterinburg_yandex',
+                       'prom.t_krasnodar_gismeteo',
+                       'prom.t_krasnodar_yandex',
+                       'prom.all_users',
+                       'prom.subscribers',
+                       'metrics.model_moscow',
+                       'metrics.model_krasnodar',
+                       'metrics.model_ekaterinburg',
+                       'predict.forecast_moscow',
+                       'predict.forecast_krasnodar',
+                       'predict.forecast_ekaterinburg')):
     try:
         for table in tables:
-            query = f"SELECT * FROM {table} orderby date;"  # SQL-запрос
-
-            df = pd.read_sql_query(query, connection)
+            query = f"SELECT * FROM {table} order by date;"  # SQL-запрос
+            rows = db.execute_query(query)
+            df = pd.DataFrame(rows)
             df.to_csv(f'backup/{table.split(".")[0]}/{table.split(".")[1]}.csv', index=False)
         print('BACKUP good!')
     except Exception as e:
