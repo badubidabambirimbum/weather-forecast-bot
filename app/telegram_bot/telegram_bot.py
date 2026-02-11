@@ -24,6 +24,7 @@ import library.additional_functions as lib
 import library.airflow_functions as afl
 from library.telegram_constants import WEATHER_YANDEX_SMILE, WEATHER_GISMETEO_SMILE, WEATHER_GISMETEO_EXCEPTIONS, SET_CITIES, SET_TYPES, TRANSLATE_CITIES
 from library.Keyboards import kb, kb_help, kb_cities, ikb_info
+from library.database import DataBase
 import json
 
 
@@ -42,11 +43,13 @@ admin_id = os.getenv("ADMIN_ID")
 
 scheduler_async = AsyncIOScheduler()
 
-connection, connect_text = lib.create_connect(host=variables['host_db'],
-                                              port=variables['port_db'],
-                                              user=variables['user_db'],
-                                              password=variables['password_db'],
-                                              database=variables['name_db'])
+db = DataBase(
+            host=variables['host_db'],
+            port=variables['port_db'],
+            user=variables['user_db'],
+            password=variables['password_db'],
+            database=variables['name_db']
+            )
 
 
 async def update_dataset(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar', None] = None,
@@ -62,7 +65,7 @@ async def update_dataset(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar', No
             for type in SET_TYPES:
                 city = TRANSLATE_CITIES[city_ru]
                 try:
-                    afl.update(city, type, connection)
+                    afl.update(city, type, db)
                     log_string += f"✅ {city} {type} \n"
                     log_count += 1
                 except Exception as e:
@@ -72,7 +75,7 @@ async def update_dataset(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar', No
         await bot.send_message(log_id, text=f"{log_time} {log_count} / 6 \n{log_string}", parse_mode='HTML')
     else:
         try:
-            afl.update(city, type, connection)
+            afl.update(city, type, db)
             await bot.send_message(log_id, text=f"✅ {city} {type}", parse_mode='HTML')
         except Exception as e:
             await bot.send_message(log_id, text=f"❌ {city} {type}\n{e}", parse_mode='HTML')
@@ -82,13 +85,11 @@ async def scheduled_notification():
     '''
     Отправка прогноза подписчикам
     '''
-    with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-        select_sub = f"SELECT * FROM prom.subscribers;"
-        cursor.execute(select_sub)
-        rows = cursor.fetchall()
+    select_sub = f"SELECT * FROM prom.subscribers;"
+    rows = db.execute_query(select_sub)
     for row in rows:
         try:
-            await bot.send_message(row["id"], text=lib.create_forecast(row["city"], 1, 1, connection), parse_mode='HTML')
+            await bot.send_message(row["id"], text=lib.create_forecast(row["city"], 1, 1, db), parse_mode='HTML')
         except Exception as e:
             await bot.send_message(chat_id=log_id,
                                    text=f"❌ Не удалось отправить сообщение пользователю {row['id']}: {e}",
@@ -111,16 +112,15 @@ async def add_user(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar', None], m
     user_id = message.from_user.id
 
     # Поиск индекса в таблице
-    with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-        select_sub = "SELECT id FROM prom.subscribers WHERE id = %s;"
-        cursor.execute(select_sub, (user_id,))
-        rows = cursor.fetchall()
+    select_sub = "SELECT id FROM prom.subscribers WHERE id = {user_id};".format(user_id=str(user_id))
+    rows = db.execute_query(select_sub)
 
     if len(rows) == 0:
-        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            add_new_sub = "INSERT INTO prom.subscribers (id, date, city) VALUES (%s, %s, %s);"
-            cursor.execute(add_new_sub, (user_id, datetime.now().strftime('%Y-%m-%d'), city))
-            connection.commit()
+        db.insert('prom',
+                  'subscribers',
+                  ['id', 'date', 'city'],
+                  (str(user_id), str(datetime.now().strftime('%Y-%m-%d')), str(city))
+                  )
 
         print(f"Новая подписка на оповещение о погоде: {message.from_user.username}")
         await bot.send_message(chat_id=log_id,
@@ -138,8 +138,10 @@ async def on_startup(_):
     Функция, которая вызывается при запуске бота
     '''
     await bot.send_message(log_id, text=f"🤖 <b>запущен</b>!", parse_mode='HTML')
-    await bot.send_message(chat_id=log_id, text=connect_text, parse_mode='HTML')
-    if connect_text != f"✅ Подключение установлено!":
+    if db.connection:
+        await bot.send_message(chat_id=log_id, text="✅ Подключение установлено!", parse_mode='HTML')
+    else:
+        await bot.send_message(chat_id=log_id, text=f"❌ Не удалось установить подключение!\n{db.log_error_connect}", parse_mode='HTML')
         sys.exit(0)
     print(f"{datetime.now()} Бот был успешно запущен!")
 
@@ -150,7 +152,7 @@ async def on_shutdown(_):
     '''
     await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
     try:
-        connection.close()
+        db.close_connection()
     except:
         pass
     print(f"{datetime.now()} Бот выключен!")
@@ -161,16 +163,15 @@ async def start_message(message: types.Message):
     user_id = message.from_user.id
 
     # Поиск индекса в таблице
-    with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-        select_sub = f"SELECT id FROM prom.all_users WHERE id = %s;"
-        cursor.execute(select_sub, (user_id,))
-        rows = cursor.fetchall()
+    select_sub = "SELECT id FROM prom.all_users WHERE id = {user_id};".format(user_id=str(user_id))
+    rows = db.execute_query(select_sub)
 
     if len(rows) == 0:
-        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            add_new_user = "INSERT INTO prom.all_users (id, username, date) VALUES (%s, %s, %s);"
-            cursor.execute(add_new_user, (user_id, message.from_user.username, datetime.now().strftime('%Y-%m-%d')))
-            connection.commit()
+        db.insert('prom',
+                  'all_users',
+                  ['id', 'username', 'date'],
+                  (str(user_id), str(message.from_user.username), str(datetime.now().strftime('%Y-%m-%d')))
+                  )
 
         print(f"Новый пользователь: {message.from_user.username}!!!")
         await bot.send_message(chat_id=log_id,
@@ -269,17 +270,13 @@ async def add_Ekaterinburg(message: types.Message):
 async def remove_message(message: types.Message):
     user_id = message.from_user.id
 
-    with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-        select_sub = f"SELECT id FROM prom.subscribers WHERE id = %s;"
-        cursor.execute(select_sub, (user_id,))
-        rows = cursor.fetchall()
+    select_sub = "SELECT id FROM prom.subscribers WHERE id = {user_id};".format(user_id=str(user_id))
+    rows = db.execute_query(select_sub)
 
     if len(rows) != 0:
 
-        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            select_sub = f"DELETE FROM prom.subscribers WHERE id = %s;"
-            cursor.execute(select_sub, (user_id,))
-            connection.commit()
+        filter = 'id = {user_id}'.format(user_id=str(user_id))
+        db.delete('prom', 'subscribers', filter)
 
         print(f"Отписка: {message.from_user.username}")
         await bot.send_message(chat_id=log_id,
@@ -342,7 +339,7 @@ async def check_datasets(message: types.Message):
         text = ""
         for type in SET_TYPES:
             for city in SET_CITIES:
-                text += f"{len(lib.view(TRANSLATE_CITIES[city], type, connection, key='all'))} {city} {type} \n"
+                text += f"{len(lib.view(TRANSLATE_CITIES[city], type, db, key='all'))} {city} {type} \n"
         await bot.send_message(chat_id=admin_id,
                                text=text)
     else:
@@ -356,10 +353,8 @@ async def database_all_users(message: types.Message):
     user_id = message.from_user.id
 
     if user_id == admin_id:
-        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            select_sub = f"SELECT * FROM prom.all_users;"
-            cursor.execute(select_sub)
-            rows = cursor.fetchall()
+        select_sub = f"SELECT * FROM prom.all_users;"
+        rows = db.execute_query(select_sub)
         names = ['id', 'username', 'date']
         text = f"{str(names[0]):^25} {str(names[1]):^25} {str(names[2]):^15} \n"
 
@@ -379,10 +374,8 @@ async def database_subs(message: types.Message):
     user_id = message.from_user.id
 
     if user_id == admin_id:
-        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            select_sub = f"SELECT * FROM prom.subscribers;"
-            cursor.execute(select_sub)
-            rows = cursor.fetchall()
+        select_sub = f"SELECT * FROM prom.subscribers;"
+        rows = db.execute_query(select_sub)
         names = ['id', 'date', 'city']
         text = f"{str(names[0]):^25} {str(names[1]):^25} {str(names[2]):^15} \n"
 
@@ -403,7 +396,7 @@ async def off_bot(message: types.Message):
     user_id = message.from_user.id
     if user_id == admin_id:
         await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
-        connection.close()
+        db.close_connection()
         print(f"{datetime.now()} Бот выключен!")
         sys.exit(0)
     else:
@@ -458,7 +451,7 @@ async def callback_message(callback: types.CallbackQuery):
     await callback.message.delete_reply_markup()
     city, dist = callback.data.split()
     try:
-        forecast_txt = lib.create_forecast(city, dist, 10, connection)
+        forecast_txt = lib.create_forecast(city, dist, 10, db)
     except Exception as e:
         print(f'Ошибка:{e}')
         forecast_txt = f"Прогноз погоды на {dist} дней недоступен!"

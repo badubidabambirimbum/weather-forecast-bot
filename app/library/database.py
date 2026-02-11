@@ -29,6 +29,7 @@ class DataBase:
             )
             self.logger.info(f"Connection to {self.database} successful")
         except Exception as ex:
+            self.log_error_connect = str(ex)
             self.logger.error(ex)
 
         return connection
