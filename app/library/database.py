@@ -1,3 +1,4 @@
+from typing import List
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from logger import create_logger
@@ -18,6 +19,9 @@ class DataBase:
         self.connection = self.create_connection()
 
     def create_connection(self):
+        '''
+        Создание подключения к базе данных
+        '''
         connection = None
         try:
             connection = psycopg2.connect(
@@ -35,10 +39,18 @@ class DataBase:
         return connection
 
     def close_connection(self):
+        '''
+        Закрытие подключения к базе данных
+        '''
         self.connection.close()
         self.logger.info(f"Connection to {self.database} closed")
 
-    def execute_query(self, query: str) -> list:
+    def execute_query(self, query: str) -> List[dict[str,str]]:
+        '''
+        получение результата SQL запроса к БД
+        :param query: запрос на языке SQL
+        :return: List[dict[str,str]]
+        '''
         result = []
         self.logger.info(f"Executing query: {query}")
         try:
@@ -51,6 +63,14 @@ class DataBase:
         return result
 
     def insert(self, schema: str, table_name: str, columns_list: list, data: tuple) -> bool:
+        '''
+        Вставка строки данных в таблицу
+        :param schema:
+        :param table_name:
+        :param columns_list: Список столбцов
+        :param data: Кортеж значений
+        :return:
+        '''
         self.logger.info(f"Inserting into {schema}.{table_name}")
         try:
             values_str = ', '.join(['%s'] * len(columns_list))
@@ -73,6 +93,13 @@ class DataBase:
         return False
 
     def delete(self, schema: str, table_name: str, filter: str) -> bool:
+        '''
+        Удаление из таблицы по фильтру
+        :param schema:
+        :param table_name:
+        :param filter: что должно идти после WHERE в SQL запросе
+        :return:
+        '''
         self.logger.info(f"Deleting from {schema}.{table_name}")
         sql = "DELETE FROM {schema}.{table_name} WHERE {filter};".format(schema=schema, table_name=table_name, filter=filter)
         self.logger.info(f"SQL:\n {sql}")

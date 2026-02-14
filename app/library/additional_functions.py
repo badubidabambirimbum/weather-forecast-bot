@@ -1,9 +1,11 @@
+from typing import List
+
 import pandas as pd
 from collections import deque
 from datetime import datetime
 from telegram_constants import *
 from database import DataBase
-
+import functools
 
 def view(city: str, type: str, db: DataBase, schema='prom', key="tail", OrderBy_column='date'):
     '''Просмотр таблицы по городу и сайту'''
@@ -85,6 +87,28 @@ def backup(db, tables=('prom.t_moscow_gismeteo',
     except Exception as e:
         raise ValueError(e)
 
-def tail(filepath, n=100):
+def tail(filepath, n=100) -> List:
+    '''
+    Функция для получения n последних строк файла
+    :param filepath: путь к файлу
+    :param n: кол-во строк
+    :return:
+    '''
     with open(filepath, "r", encoding="utf-8") as f:
         return list(deque(f, n))
+
+
+def log_function(logger):
+    """Декоратор для логирования выполнения функций"""
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            logger.info(f"_started '{func.__name__}'")
+            try:
+                result = await func(*args, **kwargs)
+                logger.info(f"_stopped '{func.__name__}'")
+                return result
+            except Exception as e:
+                logger.error(f"_failed '{func.__name__}' {e}")
+        return wrapper
+    return decorator

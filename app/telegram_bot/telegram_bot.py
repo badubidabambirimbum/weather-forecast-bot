@@ -1,20 +1,16 @@
 import time
-
 from aiogram import Bot, types, Dispatcher, executor
-
 from typing import Literal
-
 # import secret.auth_data as s  # API KEY, ADMIN ID, LOG ID, ...
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from datetime import datetime
 import asyncio
-from psycopg2.extras import RealDictCursor
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
 import sys
 import os
-
 from dotenv import load_dotenv
+import json
+from io import BytesIO
 
 sys.path.append('/app/library')
 
@@ -23,11 +19,7 @@ from telegram_constants import WEATHER_YANDEX_SMILE, WEATHER_GISMETEO_SMILE, WEA
 from Keyboards import kb, kb_help, kb_cities, ikb_info
 from database import DataBase
 from logger import create_logger
-import json
 
-from io import BytesIO
-
-# time.sleep(100)
 
 with open("../secret/variables.json", "r", encoding="utf-8") as file:
     variables = json.load(file)
@@ -86,12 +78,11 @@ logger.info(f"LOG_FILENAME: {LOG_FILENAME}")
 #             await bot.send_message(log_id, text=f"❌ {city} {type}\n{e}", parse_mode='HTML')
 
 
+@lib.log_function(logger=logger)
 async def scheduled_notification():
     '''
     Отправка прогноза подписчикам
     '''
-    # time.strftime('%Y-%m-%d %H-%M-%S')
-    logger.info('_started scheduled_notification {current_time}'.format(current_time=datetime.now()))
     select_sub = f"SELECT * FROM prom.subscribers;"
     rows = db.execute_query(select_sub)
     for row in rows:
@@ -102,7 +93,6 @@ async def scheduled_notification():
             await bot.send_message(chat_id=log_id,
                                    text=f"❌ Не удалось отправить сообщение пользователю {row['id']}: {e}",
                                    parse_mode='HTML')
-    logger.info('_stopped scheduled_notification {current_time}'.format(current_time=datetime.now()))
 
 
 def start_scheduler_async():
@@ -113,11 +103,11 @@ def start_scheduler_async():
     scheduler_async.start()
 
 
+@lib.log_function(logger=logger)
 async def add_user(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar', None], message: types.Message):
     '''
     Добавление подписчика
     '''
-    logger.info('_started add_user {current_time}'.format(current_time=datetime.now()))
     user_id = message.from_user.id
 
     # Поиск индекса в таблице
@@ -140,14 +130,13 @@ async def add_user(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar', None], m
                             "Каждый день в 7️⃣ утра по МСК бот🤖 будет присылать вам прогноз погоды на предстоящий день!😉")
     else:
         await message.reply("Вы уже подписаны на оповещение о погоде❗️️")
-    logger.info('_stopped add_user {current_time}'.format(current_time=datetime.now()))
 
 
+@lib.log_function(logger=logger)
 async def on_startup(_):
     '''
     Функция, которая вызывается при запуске бота
     '''
-    logger.info('_started on_startup {current_time}'.format(current_time=datetime.now()))
     await bot.send_message(log_id, text=f"🤖 <b>запущен</b>!", parse_mode='HTML')
     if db.connection:
         await bot.send_message(chat_id=log_id, text="✅ Подключение установлено!", parse_mode='HTML')
@@ -155,27 +144,26 @@ async def on_startup(_):
         await bot.send_message(chat_id=log_id, text=f"❌ Не удалось установить подключение!\n{db.log_error_connect}", parse_mode='HTML')
         sys.exit(0)
     logger.info('Бот запущен {current_time}'.format(current_time=datetime.now()))
-    logger.info('_stopped on_startup {current_time}'.format(current_time=datetime.now()))
 
 
+@lib.log_function(logger=logger)
 async def on_shutdown(_):
     '''
     Функция, которая вызывается при выключении бота
     '''
-    logger.info('_started on_shutdown {current_time}'.format(current_time=datetime.now()))
     await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
     try:
         db.close_connection()
     except:
         pass
     logger.info('Бот выключен {current_time}'.format(current_time=datetime.now()))
-    logger.info('_stopped on_shutdown {current_time}'.format(current_time=datetime.now()))
 
 
+@lib.log_function(logger=logger)
 @dp.message_handler(commands=["start"])
 async def start_message(message: types.Message):
+    logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
-    logger.info('_started start_message. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=user_id))
 
     # Поиск индекса в таблице
     select_sub = "SELECT id FROM prom.all_users WHERE id = {user_id};".format(user_id=str(user_id))
@@ -201,12 +189,11 @@ async def start_message(message: types.Message):
         f'Здесь ты найдешь ближайший прогноз погоды 🌦 в интересующем тебя городе! \n'
         f'Для дополнительной информации воспользуйся командой /help')
 
-    logger.info('_stopped start_message. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=user_id))
 
-
+@lib.log_function(logger=logger)
 @dp.message_handler(commands=["help"])
 async def help_message(message: types.Message):
-    logger.info('_started help_message. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     await bot.send_sticker(chat_id=message.from_user.id,
                            sticker="CAACAgIAAxkBAAEMj1Fmp6-tcw1DpXSWJp3yCkcgTFAy6QACshIAAmD9iUtRNBJT06z1kDUE",
                            reply_markup=ReplyKeyboardRemove())
@@ -235,30 +222,30 @@ async def help_message(message: types.Message):
         text=text_help,
         parse_mode='HTML',
         reply_markup=kb_cities)
-    logger.info('_stopped help_message. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
 
 
+@lib.log_function(logger=logger)
 @dp.message_handler(commands=["info"])
 async def info_message(message: types.Message):
-    logger.info('_started info_message. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     await bot.send_sticker(message.from_user.id,
                            sticker="CAACAgEAAxkBAAEMrDFmxDk66eDeDYk0jqiSZvGBeX2klAAC0gMAAuJ5IET7lNR5d0OiyjUE")
     await bot.send_message(chat_id=message.from_user.id,
                            text='Ниже представлены ссылка на GitHub проекта📄 и на мой Telegram для обратной связи📞',
                            reply_markup=ikb_info)
-    logger.info('_stopped info_message. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
 
 
+@lib.log_function(logger=logger)
 @dp.message_handler(commands=["cities"])
 async def cities_message(message: types.Message):
-    logger.info('_started cities_message. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     await message.answer(text=f"Доступные города ⚡️", reply_markup=kb)
-    logger.info('_stopped cities_message. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
 
 
+@lib.log_function(logger=logger)
 @dp.message_handler(commands=["weather"])
 async def weather_message(message: types.Message):
-    logger.info('_started weather_message. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     mes_ya = "Обозначения погоды 🔸Yandex:\n\n"
     mes_gis = "Обозначения погоды 🔹GisMeteo:\n\n"
 
@@ -273,33 +260,33 @@ async def weather_message(message: types.Message):
                            reply_markup=kb_cities)
     await message.answer(text=mes_ya)
     await message.answer(text=mes_gis)
-    logger.info('_stopped weather_message. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
 
 
+@lib.log_function(logger=logger)
 @dp.message_handler(lambda message: '+москва' == message.text.lower())
 async def add_Moscow(message: types.Message):
-    logger.info('_started add_Moscow. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     await add_user(message.text[1:].capitalize(), message)
-    logger.info('_stopped add_Moscow. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
 
 
+@lib.log_function(logger=logger)
 @dp.message_handler(lambda message: '+краснодар' == message.text.lower())
 async def add_Krasnodar(message: types.Message):
-    logger.info('_started add_Krasnodar. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     await add_user(message.text[1:].capitalize(), message)
-    logger.info('_stopped add_Krasnodar. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
 
 
+@lib.log_function(logger=logger)
 @dp.message_handler(lambda message: '+екатеринбург' == message.text.lower())
 async def add_Ekaterinburg(message: types.Message):
-    logger.info('_started add_Ekaterinburg. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     await add_user(message.text[1:].capitalize(), message)
-    logger.info('_stopped add_Ekaterinburg. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
 
 
+@lib.log_function(logger=logger)
 @dp.message_handler(commands=["remove"])
 async def remove_message(message: types.Message):
-    logger.info('_started remove_message. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
 
     select_sub = "SELECT id FROM prom.subscribers WHERE id = {user_id};".format(user_id=str(user_id))
@@ -318,14 +305,13 @@ async def remove_message(message: types.Message):
         await message.reply("Вы успешно отписались от оповещения о погоде! ✔️")
     else:
         await message.reply("Вы не были подписаны на оповещение о погоде❗️")
-    logger.info('_stopped remove_message. user:{user_id} {current_time}'.format(current_time=datetime.now(), user_id=message.from_user.id))
 
 
 # ADMIN
+@lib.log_function(logger=logger)
 @dp.message_handler(commands=["admin"])
 async def admin_list(message: types.Message):
-    logger.info('_started admin_list. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
     if user_id == admin_id:
         text = (f"<b>/update</b> - <i>обновление базы данных</i> \n"
@@ -341,8 +327,6 @@ async def admin_list(message: types.Message):
     else:
         await bot.send_message(chat_id=user_id,
                                text=f'Данная команда вам недоступна!')
-    logger.info('_stopped admin_list. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
 
 
 # ADMIN
@@ -369,10 +353,10 @@ async def admin_list(message: types.Message):
 
 
 # ADMIN
+@lib.log_function(logger=logger)
 @dp.message_handler(commands=["check"])
 async def check_datasets(message: types.Message):
-    logger.info('_started check_datasets. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
     if user_id == admin_id:
         text = ""
@@ -384,15 +368,13 @@ async def check_datasets(message: types.Message):
     else:
         await bot.send_message(chat_id=user_id,
                                text=f'Данная команда вам недоступна!')
-    logger.info('_stopped check_datasets. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
 
 
 # ADMIN
+@lib.log_function(logger=logger)
 @dp.message_handler(commands=["all_users"])
 async def database_all_users(message: types.Message):
-    logger.info('_started database_all_users. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
 
     if user_id == admin_id:
@@ -409,15 +391,13 @@ async def database_all_users(message: types.Message):
     else:
         await bot.send_message(chat_id=user_id,
                                text=f'Данная команда вам недоступна!')
-    logger.info('_stopped database_all_users. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
 
 
 # ADMIN
+@lib.log_function(logger=logger)
 @dp.message_handler(commands=["subs"])
 async def database_subs(message: types.Message):
-    logger.info('_started database_subs. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
 
     if user_id == admin_id:
@@ -435,15 +415,13 @@ async def database_subs(message: types.Message):
     else:
         await bot.send_message(chat_id=user_id,
                                text=f'Данная команда вам недоступна!')
-    logger.info('_stopped database_subs. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
 
 
 # ADMIN
+@lib.log_function(logger=logger)
 @dp.message_handler(commands=["off"])
 async def off_bot(message: types.Message):
-    logger.info('_started off_bot. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
     if user_id == admin_id:
         await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
@@ -453,8 +431,6 @@ async def off_bot(message: types.Message):
     else:
         await bot.send_message(chat_id=user_id,
                                text=f'Данная команда вам недоступна!')
-    logger.info('_stopped off_bot. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
 
 
 # ADMIN
@@ -469,25 +445,23 @@ async def off_bot(message: types.Message):
 
 
 # ADMIN
+@lib.log_function(logger=logger)
 @dp.message_handler(commands=["message_subs"])
 async def message_for_subs(message: types.Message):
-    logger.info('_started message_for_subs. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
     if user_id == admin_id:
         await scheduled_notification()
     else:
         await bot.send_message(chat_id=user_id,
                                text=f'Данная команда вам недоступна!')
-    logger.info('_stopped message_for_subs. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
 
 
 # ADMIN
+@lib.log_function(logger=logger)
 @dp.message_handler(commands=["logs"])
 async def get_logs(message: types.Message):
-    logger.info('_started get_logs. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
     if user_id == admin_id:
         args = message.get_args()
@@ -512,14 +486,12 @@ async def get_logs(message: types.Message):
     else:
         await bot.send_message(chat_id=user_id,
                                text=f'Данная команда вам недоступна!')
-    logger.info('_stopped get_logs. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
 
 
+@lib.log_function(logger=logger)
 @dp.message_handler()
 async def check_message(message: types.Message):
-    logger.info('_started check_message. user:{user_id} {current_time}'.format(current_time=datetime.now(),
-                                                                                user_id=message.from_user.id))
+    logger.info(f'called by the user {message.from_user.id}')
     ikb = InlineKeyboardMarkup(row_width=3)
     ib1 = InlineKeyboardButton(text="1️⃣", callback_data=message.text + " 1")
     ib2 = InlineKeyboardButton(text="3️⃣", callback_data=message.text + " 3")
@@ -540,9 +512,9 @@ async def check_message(message: types.Message):
                                                                                 user_id=message.from_user.id))
 
 
+@lib.log_function(logger=logger)
 @dp.callback_query_handler()
 async def callback_message(callback: types.CallbackQuery):
-    logger.info('_started callback_message {current_time}'.format(current_time=datetime.now()))
     await callback.message.delete_reply_markup()
     city, dist = callback.data.split()
     try:
@@ -553,7 +525,6 @@ async def callback_message(callback: types.CallbackQuery):
 
     await bot.send_message(callback.from_user.id, text=f'Прогноз в городе {city} на {dist} дней:')
     await bot.send_message(callback.from_user.id, text=forecast_txt, parse_mode='HTML')
-    logger.info('_stopped callback_message {current_time}'.format(current_time=datetime.now()))
 
 
 
