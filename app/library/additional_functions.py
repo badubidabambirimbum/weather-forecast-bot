@@ -1,7 +1,8 @@
 import pandas as pd
 from collections import deque
 from datetime import datetime
-from library.telegram_constants import *
+from telegram_constants import *
+from database import DataBase
 
 
 def view(city: str, type: str, db: DataBase, schema='prom', key="tail", OrderBy_column='date'):

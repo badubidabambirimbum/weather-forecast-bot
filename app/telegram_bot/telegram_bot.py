@@ -16,16 +16,13 @@ import os
 
 from dotenv import load_dotenv
 
-# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', 'library')))
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
+sys.path.append('/app/library')
 
-import library.additional_functions as lib
-# import library.airflow_functions as afl
-from library.telegram_constants import WEATHER_YANDEX_SMILE, WEATHER_GISMETEO_SMILE, WEATHER_GISMETEO_EXCEPTIONS, SET_CITIES, SET_TYPES, TRANSLATE_CITIES
-from library.Keyboards import kb, kb_help, kb_cities, ikb_info
-from library.database import DataBase
-from library.logger import create_logger
+import additional_functions as lib
+from telegram_constants import WEATHER_YANDEX_SMILE, WEATHER_GISMETEO_SMILE, WEATHER_GISMETEO_EXCEPTIONS, SET_CITIES, SET_TYPES, TRANSLATE_CITIES
+from Keyboards import kb, kb_help, kb_cities, ikb_info
+from database import DataBase
+from logger import create_logger
 import json
 
 from io import BytesIO
@@ -42,7 +39,7 @@ dp = Dispatcher(bot)
 logger, LOG_FILENAME = create_logger()
 
 log_id = os.getenv("TELEGRAM_CHAT_ID")
-admin_id = os.getenv("ADMIN_ID")
+admin_id = int(os.getenv("ADMIN_ID"))
 
 scheduler_async = AsyncIOScheduler()
 
@@ -54,6 +51,10 @@ db = DataBase(
             database=variables['name_db'],
             logger=logger
             )
+
+logger.info(f"PWD: {os.getcwd()}")
+logger.info(f"sys.path: {sys.path}")
+logger.info(f"LOG_FILENAME: {LOG_FILENAME}")
 
 
 # async def update_dataset(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar', None] = None,
@@ -499,13 +500,13 @@ async def get_logs(message: types.Message):
 
         n = min(n, 5000)
 
-        lines = lib.tail(LOG_FILENAME, n)
+        lines = lib.tail(f"logs/{LOG_FILENAME}", n)
 
         log_text = "".join(lines)
 
-        buffer = BytesIO(log_text.encode("utf-8"))
-        buffer.name = f"logs_last_{n}.txt"
-        buffer.seek(0)
+        buffer = BytesIO(log_text.encode("utf-8")) # Создаём объект BytesIO, который ведёт себя как файл, но хранится в памяти.
+        buffer.name = f"logs_last_{n}.txt" # Даем ему название
+        buffer.seek(0) # Перемещает “указатель” в начало файла. Если так не сделать, то отправим пустой файл
 
         await message.reply_document(buffer)
     else:

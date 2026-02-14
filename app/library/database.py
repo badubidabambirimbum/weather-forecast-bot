@@ -1,6 +1,6 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from library.logger import create_logger
+from logger import create_logger
 
 class DataBase:
     def __init__(self, host: str, port: str, user: str, password: str, database: str, logger=None):
