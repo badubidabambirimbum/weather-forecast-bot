@@ -2,13 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
-from psycopg2.extras import RealDictCursor
-import library.additional_functions as lib
 import re
-
-import asyncio
-
-from test import columns_list
 
 from app.library.database import DataBase
 

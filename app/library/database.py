@@ -1,11 +1,11 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from logger import Logger
+from library.logger import create_logger
 
 class DataBase:
     def __init__(self, host: str, port: str, user: str, password: str, database: str, logger=None):
         if logger is None:
-            self.logger = Logger()
+            self.logger = create_logger()
         else:
             self.logger = logger
         self.host = host

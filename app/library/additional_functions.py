@@ -1,7 +1,6 @@
 import pandas as pd
+from collections import deque
 from datetime import datetime
-import psycopg2
-from psycopg2.extras import RealDictCursor
 from library.telegram_constants import *
 
 
@@ -84,3 +83,7 @@ def backup(db, tables=('prom.t_moscow_gismeteo',
         print('BACKUP good!')
     except Exception as e:
         raise ValueError(e)
+
+def tail(filepath, n=100):
+    with open(filepath, "r", encoding="utf-8") as f:
+        return list(deque(f, n))
