@@ -159,39 +159,8 @@ async def on_shutdown(_):
     logger.info('Бот выключен {current_time}'.format(current_time=datetime.now()))
 
 
-@lib.log_function(logger=logger)
-@dp.message_handler(commands=["start"])
-async def start_message(message: types.Message):
-    logger.info(f'called by the user {message.from_user.id}')
-    user_id = message.from_user.id
-
-    # Поиск индекса в таблице
-    select_sub = "SELECT id FROM prom.all_users WHERE id = {user_id};".format(user_id=str(user_id))
-    rows = db.execute_query(select_sub)
-
-    if len(rows) == 0:
-        db.insert('prom',
-                  'all_users',
-                  ['id', 'username', 'date'],
-                  (str(user_id), str(message.from_user.username), str(datetime.now().strftime('%Y-%m-%d')))
-                  )
-
-        print(f"Новый пользователь: {message.from_user.username}!!!")
-        await bot.send_message(chat_id=log_id,
-                               text=f"🆕 Новый пользователь: {message.from_user.username}!!!",
-                               parse_mode='HTML')
-
-    await bot.send_sticker(message.from_user.id,
-                           sticker="CAACAgIAAxkBAAEMj01mp68a2RxE2V-27EZhT1TxljV3zQACjRAAAl_bkUp3Bt1MNp18SzUE",
-                           reply_markup=kb_help)
-    await message.answer(
-        f'Привет, {message.from_user.first_name}!👋 \n'
-        f'Здесь ты найдешь ближайший прогноз погоды 🌦 в интересующем тебя городе! \n'
-        f'Для дополнительной информации воспользуйся командой /help')
-
-
-@lib.log_function(logger=logger)
 @dp.message_handler(commands=["help"])
+@lib.log_function(logger=logger)
 async def help_message(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     await bot.send_sticker(chat_id=message.from_user.id,
@@ -224,8 +193,8 @@ async def help_message(message: types.Message):
         reply_markup=kb_cities)
 
 
-@lib.log_function(logger=logger)
 @dp.message_handler(commands=["info"])
+@lib.log_function(logger=logger)
 async def info_message(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     await bot.send_sticker(message.from_user.id,
@@ -235,15 +204,46 @@ async def info_message(message: types.Message):
                            reply_markup=ikb_info)
 
 
+@dp.message_handler(commands=["start"])
 @lib.log_function(logger=logger)
+async def start_message(message: types.Message):
+    logger.info(f'called by the user {message.from_user.id}')
+    user_id = message.from_user.id
+
+    # Поиск индекса в таблице
+    select_sub = "SELECT id FROM prom.all_users WHERE id = {user_id};".format(user_id=str(user_id))
+    rows = db.execute_query(select_sub)
+
+    if len(rows) == 0:
+        db.insert('prom',
+                  'all_users',
+                  ['id', 'username', 'date'],
+                  (str(user_id), str(message.from_user.username), str(datetime.now().strftime('%Y-%m-%d')))
+                  )
+
+        print(f"Новый пользователь: {message.from_user.username}!!!")
+        await bot.send_message(chat_id=log_id,
+                               text=f"🆕 Новый пользователь: {message.from_user.username}!!!",
+                               parse_mode='HTML')
+
+    await bot.send_sticker(message.from_user.id,
+                           sticker="CAACAgIAAxkBAAEMj01mp68a2RxE2V-27EZhT1TxljV3zQACjRAAAl_bkUp3Bt1MNp18SzUE",
+                           reply_markup=kb_help)
+    await message.answer(
+        f'Привет, {message.from_user.first_name}!👋 \n'
+        f'Здесь ты найдешь ближайший прогноз погоды 🌦 в интересующем тебя городе! \n'
+        f'Для дополнительной информации воспользуйся командой /help')
+
+
 @dp.message_handler(commands=["cities"])
+@lib.log_function(logger=logger)
 async def cities_message(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     await message.answer(text=f"Доступные города ⚡️", reply_markup=kb)
 
 
-@lib.log_function(logger=logger)
 @dp.message_handler(commands=["weather"])
+@lib.log_function(logger=logger)
 async def weather_message(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     mes_ya = "Обозначения погоды 🔸Yandex:\n\n"
@@ -262,29 +262,29 @@ async def weather_message(message: types.Message):
     await message.answer(text=mes_gis)
 
 
-@lib.log_function(logger=logger)
 @dp.message_handler(lambda message: '+москва' == message.text.lower())
+@lib.log_function(logger=logger)
 async def add_Moscow(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     await add_user(message.text[1:].capitalize(), message)
 
 
-@lib.log_function(logger=logger)
 @dp.message_handler(lambda message: '+краснодар' == message.text.lower())
+@lib.log_function(logger=logger)
 async def add_Krasnodar(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     await add_user(message.text[1:].capitalize(), message)
 
 
-@lib.log_function(logger=logger)
 @dp.message_handler(lambda message: '+екатеринбург' == message.text.lower())
+@lib.log_function(logger=logger)
 async def add_Ekaterinburg(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     await add_user(message.text[1:].capitalize(), message)
 
 
-@lib.log_function(logger=logger)
 @dp.message_handler(commands=["remove"])
+@lib.log_function(logger=logger)
 async def remove_message(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
@@ -308,8 +308,8 @@ async def remove_message(message: types.Message):
 
 
 # ADMIN
-@lib.log_function(logger=logger)
 @dp.message_handler(commands=["admin"])
+@lib.log_function(logger=logger)
 async def admin_list(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
@@ -353,8 +353,8 @@ async def admin_list(message: types.Message):
 
 
 # ADMIN
-@lib.log_function(logger=logger)
 @dp.message_handler(commands=["check"])
+@lib.log_function(logger=logger)
 async def check_datasets(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
@@ -371,8 +371,8 @@ async def check_datasets(message: types.Message):
 
 
 # ADMIN
-@lib.log_function(logger=logger)
 @dp.message_handler(commands=["all_users"])
+@lib.log_function(logger=logger)
 async def database_all_users(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
@@ -394,8 +394,8 @@ async def database_all_users(message: types.Message):
 
 
 # ADMIN
-@lib.log_function(logger=logger)
 @dp.message_handler(commands=["subs"])
+@lib.log_function(logger=logger)
 async def database_subs(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
@@ -418,8 +418,8 @@ async def database_subs(message: types.Message):
 
 
 # ADMIN
-@lib.log_function(logger=logger)
 @dp.message_handler(commands=["off"])
+@lib.log_function(logger=logger)
 async def off_bot(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
@@ -445,8 +445,8 @@ async def off_bot(message: types.Message):
 
 
 # ADMIN
-@lib.log_function(logger=logger)
 @dp.message_handler(commands=["message_subs"])
+@lib.log_function(logger=logger)
 async def message_for_subs(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
@@ -458,8 +458,8 @@ async def message_for_subs(message: types.Message):
 
 
 # ADMIN
-@lib.log_function(logger=logger)
 @dp.message_handler(commands=["logs"])
+@lib.log_function(logger=logger)
 async def get_logs(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     user_id = message.from_user.id
@@ -488,8 +488,8 @@ async def get_logs(message: types.Message):
                                text=f'Данная команда вам недоступна!')
 
 
-@lib.log_function(logger=logger)
 @dp.message_handler()
+@lib.log_function(logger=logger)
 async def check_message(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     ikb = InlineKeyboardMarkup(row_width=3)
@@ -512,8 +512,8 @@ async def check_message(message: types.Message):
                                                                                 user_id=message.from_user.id))
 
 
-@lib.log_function(logger=logger)
 @dp.callback_query_handler()
+@lib.log_function(logger=logger)
 async def callback_message(callback: types.CallbackQuery):
     await callback.message.delete_reply_markup()
     city, dist = callback.data.split()
