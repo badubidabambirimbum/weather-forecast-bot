@@ -10,5 +10,6 @@ output.log
 app/secret/auth_data.py
 logs
 psql
+secret
 *.env
 test.ipynb

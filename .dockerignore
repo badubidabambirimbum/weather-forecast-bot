@@ -1,3 +1,5 @@
 __pycache__
 app/sql_tg.ipynb
-app/secret
+app/secret/*.env
+app/secret/*.py
+logs

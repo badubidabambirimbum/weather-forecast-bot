@@ -1,4 +1,3 @@
-import time
 from aiogram import Bot, types, Dispatcher, executor
 from typing import Literal
 # import secret.auth_data as s  # API KEY, ADMIN ID, LOG ID, ...
@@ -9,7 +8,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import sys
 import os
 from dotenv import load_dotenv
-import json
 from io import BytesIO
 
 sys.path.append('/app/library')
@@ -20,11 +18,8 @@ from Keyboards import kb, kb_help, kb_cities, ikb_info
 from database import DataBase
 from logger import create_logger
 
-
-with open("../secret/variables.json", "r", encoding="utf-8") as file:
-    variables = json.load(file)
-
-load_dotenv('config.env')
+load_dotenv('../secret/config.env')
+load_dotenv('../secret/secret.env')
 
 bot = Bot(os.getenv("TOKEN"))
 dp = Dispatcher(bot)
@@ -36,11 +31,11 @@ admin_id = int(os.getenv("ADMIN_ID"))
 scheduler_async = AsyncIOScheduler()
 
 db = DataBase(
-            host=variables['host_db'],
-            port=variables['port_db'],
-            user=variables['user_db'],
-            password=variables['password_db'],
-            database=variables['name_db'],
+            host=os.getenv('POSTGRES_HOST'),
+            port=os.getenv('POSTGRES_PORT'),
+            user=os.getenv('POSTGRES_USER'),
+            password=os.getenv('POSTGRES_PASSWORD'),
+            database=os.getenv('POSTGRES_DB'),
             logger=logger
             )
 

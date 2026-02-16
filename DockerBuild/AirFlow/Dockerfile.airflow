@@ -1,12 +1,9 @@
-FROM apache/airflow:2.10.3
+FROM apache/airflow:2.10.5
 
 ENV TZ=Europe/Moscow
 
-RUN pip install 'apache-airflow[postgres]'
-RUN pip install apache-airflow-providers-telegram
+RUN pip install "apache-airflow==${AIRFLOW_VERSION}" apache-airflow-providers-postgres==5.5.2
+RUN pip install "apache-airflow==${AIRFLOW_VERSION}" apache-airflow-providers-telegram
 
-COPY ../../secret/variables.json /opt/airflow/variables.json
-COPY init_airflow/connections.sh /opt/airflow/connections.sh
-
-RUN airflow variables import /opt/airflow/variables.json
-RUN chmod +x /opt/airflow/connections.sh && /opt/airflow/connections.sh
+COPY ./app/secret/variables.json /opt/airflow/variables.json
+COPY ./DockerBuild/AirFlow/init_airflow/connections.sh /opt/airflow/connections.sh

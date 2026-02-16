@@ -3,8 +3,12 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
 import re
+import sys
 
-from app.library.database import DataBase
+sys.path.append('/opt/library')
+print(f"sys.path: {sys.path}")
+
+from database import DataBase
 
 CITIES_URL = {
     "GisMeteo":
