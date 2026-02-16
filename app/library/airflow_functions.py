@@ -251,6 +251,9 @@ def create_new_day(city:str, type:str, year:int, month:int, day:int, list_days:l
 def update(city, type, db=None, airflow_mode=False, **kwargs):
     '''Обновление таблицы по указанному городу и сайту'''
 
+    city = city.lower()
+    type = type.lower()
+
     if airflow_mode:
         from airflow.models import Variable
 
@@ -263,7 +266,7 @@ def update(city, type, db=None, airflow_mode=False, **kwargs):
                       password=Variable.get('password_db'),
                       database=Variable.get('name_db'))
 
-    if not airflow_mode:
+    else:
         df_new = create_today(city, type)
 
     table_name = f"t_{city}_{type}"
