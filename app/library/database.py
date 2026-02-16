@@ -6,7 +6,7 @@ from logger import create_logger
 class DataBase:
     def __init__(self, host: str, port: str, user: str, password: str, database: str, logger=None):
         if logger is None:
-            self.logger = create_logger()
+            self.logger, _ = create_logger()
         else:
             self.logger = logger
         self.host = host
