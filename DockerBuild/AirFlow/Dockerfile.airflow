@@ -3,6 +3,6 @@ FROM apache/airflow:2.10.5
 ENV TZ=Europe/Moscow
 
 RUN pip install "apache-airflow==${AIRFLOW_VERSION}" apache-airflow-providers-postgres==5.5.2
-RUN pip install "apache-airflow==${AIRFLOW_VERSION}" apache-airflow-providers-telegram
+RUN pip install "apache-airflow==${AIRFLOW_VERSION}" apache-airflow-providers-telegram==4.8.4
 
 COPY ./app/secret/variables.json /opt/airflow/variables.json
