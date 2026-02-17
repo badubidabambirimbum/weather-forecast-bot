@@ -6,4 +6,3 @@ RUN pip install "apache-airflow==${AIRFLOW_VERSION}" apache-airflow-providers-po
 RUN pip install "apache-airflow==${AIRFLOW_VERSION}" apache-airflow-providers-telegram
 
 COPY ./app/secret/variables.json /opt/airflow/variables.json
-COPY ./DockerBuild/AirFlow/init_airflow/connections.sh /opt/airflow/connections.sh
