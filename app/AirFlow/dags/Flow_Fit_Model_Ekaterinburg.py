@@ -15,6 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 import library.neural_network as nrl
 
 city = 'Ekaterinburg'
+timezone = 'Asia/Yekaterinburg'
 local_tz = timezone("Europe/Moscow")
 schedule = Variable.get(f"schedule_Model_{city}")
 
@@ -53,7 +54,8 @@ dag = DAG(
     catchup=False,
     is_paused_upon_creation=True,
     tags=['Model', city],
-    params={'city': city}
+    params={'city': city,
+            'timezone': timezone}
 )
 
 
@@ -62,7 +64,8 @@ start = DummyOperator(task_id='start')
 fit_model = PythonOperator(
     task_id='fit_model',
     python_callable=nrl.fit_model,
-    op_kwargs={'city': "{{ params.city }}"},
+    op_kwargs={'city'       : "{{ params.city }}",
+               'timezone'   : "{{ params.timezone }}"},
     doc="Обучение модели нейронной сети",
     dag=dag
 )

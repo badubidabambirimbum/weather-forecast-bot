@@ -1,3 +1,6 @@
+import sys
+import os
+
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -8,23 +11,28 @@ from sklearn.pipeline import make_pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import FunctionTransformer
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np 
-import pandas as pd 
+import pandas as pd
+import requests
 
-from meteostat import Point, Hourly
 from datetime import datetime
 from geopy.geocoders import Nominatim
 from dateutil.relativedelta import relativedelta
 
 from psycopg2.extras import RealDictCursor
-import library.additional_functions as lib
+
+sys.path.append('./app/library')
+
+import app.library.additional_functions as lib
 
 
 CITY = 'Moscow'                                                     # Город для прогноза
+TIMEZONE = 'Europe/Moscow'
 
-TARGET_COLUMN = 'temp'                                              # целевой атрибут
-FEATURES_COLUMNS = ['temp', 'dwpt', 'rhum', 'wspd', 'pres', 'snow'] # атрибуты для прогноза
+TARGET_COLUMN = 'temp'                                                                                                                # целевой атрибут
+FEATURES_COLUMNS_START = ["temperature_2m", "dew_point_2m", "relative_humidity_2m", "wind_speed_10m", "surface_pressure", "snowfall"] # атрибуты для прогноза
+FEATURES_COLUMNS = ['temp', 'dwpt', 'rhum', 'wspd', 'pres', 'snow']
 
 N_TIMESTEPS = 15 * 24                                               # размер окна
 N_FEATURES = len(FEATURES_COLUMNS)                                  # кол-во признаков
@@ -44,9 +52,11 @@ def get_interval_for_forecast(mode='fit'):
         start_date = end_date - relativedelta(years=1, months=6)
     elif mode == 'predict':
         end_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - relativedelta(hours=1)
-        start_date = end_date + relativedelta(hours=1) - relativedelta(days=15)
+        start_date = end_date + relativedelta(hours=1) - relativedelta(days=15) # todo: поправить кол-во дней, оно задается наверху, а тут хардкод
     else:
         raise KeyError()
+
+
     return start_date, end_date
 
 
@@ -56,28 +66,65 @@ def get_city_coordinates(city_name):
     return location.latitude, location.longitude
 
 
-def get_dataset(city, start, end):
+# def get_dataset_old(city, start, end):
+#     latitude, longitude = get_city_coordinates(city)
+#     location = Point(latitude, longitude)
+#     df = hourly(location, start, end)
+#     df = df.fetch()
+#     df = df.reset_index()
+#     df = df.sort_values(by='time')
+#     df['snow'] = df['snow'].fillna(0)
+#     df.set_index('time', inplace=True)
+#     return df
+
+def get_dataset(city, timezone, start, end):
+    print("start get_dataset")
+    global FEATURES_COLUMNS
+    global FEATURES_COLUMNS_START
+
+    url = "https://archive-api.open-meteo.com/v1/archive"
+
     latitude, longitude = get_city_coordinates(city)
-    location = Point(latitude, longitude)
-    df = Hourly(location, start, end)
-    df = df.fetch()
-    df = df.reset_index()
+
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "start_date": start.strftime("%Y-%m-%d"),
+        "end_date": end.strftime("%Y-%m-%d"),
+        "hourly": FEATURES_COLUMNS_START,
+        "timezone": timezone
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+    df = pd.DataFrame(data["hourly"])
+
+    df = df.rename(columns=dict([(x,y) for x,y in zip(FEATURES_COLUMNS_START, FEATURES_COLUMNS)]))
+    df['time'] = pd.to_datetime(df['time'])
     df = df.sort_values(by='time')
-    df['snow'] = df['snow'].fillna(0)
-    df.set_index('time', inplace=True) 
+    df.set_index('time', inplace=True)
+
+    print(df.head(5))
+
     return df
 
 
+
 def scale_snow_column(series):
+    print("start scale_snow_column")
     snow = series.copy().values.astype(float)
+
     mask = snow != 0
+
     if mask.any():
         scaler = MinMaxScaler()
         snow[mask] = scaler.fit_transform(snow[mask].reshape(-1, 1)).flatten()
-    return pd.Series(snow)
+
+    return pd.Series(snow, index=series.index)
 
 
 def create_data(X, Y, n_timesteps, n_forecast, n_features):
+    print("start create_data")
     x_data = []
     y_data = []
 
@@ -89,10 +136,14 @@ def create_data(X, Y, n_timesteps, n_forecast, n_features):
     print(f"x_data.shape: {x_data.shape}")
     print(f"y_data.shape: {y_data.shape}")
 
+    print(x_data[:10])
+    print(y_data[:10])
+
     return x_data, y_data
 
 
 def create_model(X, Y, n_timesteps, n_forecast, n_features):
+    print("start create_model")
     model = keras.Sequential([
         layers.LSTM(32, return_sequences=True, input_shape=(n_timesteps, n_features)),
         layers.LSTM(64, return_sequences=False),
@@ -115,6 +166,7 @@ def create_model(X, Y, n_timesteps, n_forecast, n_features):
 
 
 def save_history_fit(history):
+    print("start save_history_fit")
     metrics = {'loss': 'Loss', 
                'mean_squared_error': 'MSE', 
                'r2_score': 'R2', 
@@ -135,12 +187,16 @@ def save_history_fit(history):
     return result
 
 
-def fit_model(city=CITY, **kwargs):
+def fit_model(city=CITY, timezone=TIMEZONE,  **kwargs):
+    print("start fit_model")
     start, end = get_interval_for_forecast() # Получаем начало и конец интервала для прогноза (1.5 года)
 
-    dataset = get_dataset(city, start, end)
+    dataset = get_dataset(city, timezone, start, end)
 
     dataset['snow'] = scale_snow_column(dataset['snow'])
+
+    print(dataset.head(5))
+    print(dataset.info())
 
     X_train_data = dataset[FEATURES_COLUMNS].loc[start:end]
     y_train_data = dataset[[TARGET_COLUMN]].loc[start:end]
@@ -163,11 +219,16 @@ def fit_model(city=CITY, **kwargs):
 
     X_train, y_train = create_data(X_train_scal, y_train_scal, N_TIMESTEPS, N_FORECAST, N_FEATURES)
 
+    print(X_train[:10])
+    print(y_train[:10])
+
     model = create_model(X_train, y_train, N_TIMESTEPS, N_FORECAST, N_FEATURES)
 
     history = model.fit(X_train, y_train, batch_size=BATCH_SIZE, epochs=NUM_EPOCHS)
     result_fit = save_history_fit(history)
-    
+
+
+    os.makedirs('models', exist_ok=True)
     model.save(f'models/model_{city}.keras')
 
     return result_fit
@@ -208,6 +269,7 @@ def load_metrics(city=CITY, airflow_mode=True, connection=None, **kwargs):
 
 
 def get_window_min_max(arr, window_size=24):
+    print('start get_window_min_max')
     # Разбить на окна и посчитать min и max в каждом
     chunks = [arr[i:i+window_size] for i in range(0, len(arr), window_size)]
     mins = [np.min(chunk) for chunk in chunks]
@@ -215,12 +277,14 @@ def get_window_min_max(arr, window_size=24):
     return mins, maxs
 
 
-def get_predict(city=CITY, **kwargs):
+def get_predict(city=CITY, timezone=TIMEZONE, **kwargs):
     start, end = get_interval_for_forecast(mode='predict')
 
-    dataset = get_dataset(city, start, end)
+    dataset = get_dataset(city, timezone, start, end)
 
     dataset['snow'] = scale_snow_column(dataset['snow'])
+
+    print(dataset.info())
 
     X_window_data = dataset[FEATURES_COLUMNS].loc[start:end]
     y_window_data = dataset[[TARGET_COLUMN]].loc[start:end]
@@ -241,18 +305,28 @@ def get_predict(city=CITY, **kwargs):
     X_window_scal = preprocessing_X.fit_transform(X_window_data)
     y_window_scal = preprocessing_Y.fit_transform(y_window_data).reshape(len(y_window_data))
 
-    X, y = create_data(X_window_scal, y_window_scal, N_TIMESTEPS, N_FORECAST, N_FEATURES)
+    print(X_window_scal[:10])
+    print(y_window_scal[:10])
+
+    # X, y = create_data(X_window_scal, y_window_scal, N_TIMESTEPS, N_FORECAST, N_FEATURES)
+
+    X = np.array([X_window_scal])
 
     model = tf.keras.models.load_model(f'models/model_{city}.keras')
 
     pred = model.predict(X)
+    print(f"pred: {pred}")
     predict = np.reshape(pred, (pred.shape[0], pred.shape[1]))
     # Получаем scaler из пайплайна
     scaler = preprocessing_Y.named_transformers_['pipe'].named_steps['minmaxscaler']
     # Возвращаем исходные значения
     predict = scaler.inverse_transform(predict)
+    print(f"predict: {predict}")
 
-    nights, days = get_window_min_max(predict, window_size=24)
+    nights, days = get_window_min_max(predict[0], window_size=24)
+
+    print(days)
+    print(len(days))
 
     today = datetime.now().strftime('%Y-%m-%d')
 
