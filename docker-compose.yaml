@@ -23,6 +23,7 @@ x-airflow-common:
     - ./app/AirFlow/logs:/opt/airflow/logs
     - ./app/AirFlow/plugins:/opt/airflow/plugins
     - ./app/library/:/opt/library
+    - ./models/:/opt/models
   networks:
       - telegram_bot_network
   depends_on:

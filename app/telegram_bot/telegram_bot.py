@@ -469,7 +469,7 @@ async def get_logs(message: types.Message):
 
         n = min(n, 5000)
 
-        lines = lib.tail(f"logs/{LOG_FILENAME}", n)
+        lines = lib.get_tail_file(f"logs/{LOG_FILENAME}", n)
 
         log_text = "".join(lines)
 

@@ -216,7 +216,7 @@ def create_today(city, type, airflow_mode=False, today=datetime.now().strftime('
 
     return df
 
-def create_new_day(city:str, type:str, year:int, month:int, day:int, list_days:list, list_nights:list, list_weathers:list, db, schema='prom'):
+def create_new_day(city:str, type:str, year:int, month:int, day:int, list_days:list, list_nights:list, list_weathers:list, db: DataBase, schema='prom'):
     '''Ручное добавление одного дня по указанному городу и сайту'''
 
     date = datetime(year, month, day)

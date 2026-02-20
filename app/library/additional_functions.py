@@ -87,7 +87,7 @@ def backup(db, tables=('prom.t_moscow_gismeteo',
     except Exception as e:
         raise ValueError(e)
 
-def tail(filepath, n=100) -> List:
+def get_tail_file(filepath, n=100) -> List:
     '''
     Функция для получения n последних строк файла
     :param filepath: путь к файлу

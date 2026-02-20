@@ -11,7 +11,6 @@ from sklearn.pipeline import make_pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import FunctionTransformer
 
-# import matplotlib.pyplot as plt
 import numpy as np 
 import pandas as pd
 import requests
@@ -20,11 +19,9 @@ from datetime import datetime
 from geopy.geocoders import Nominatim
 from dateutil.relativedelta import relativedelta
 
-from psycopg2.extras import RealDictCursor
+sys.path.append('/opt/library')
 
-sys.path.append('./app/library')
-
-import app.library.additional_functions as lib
+from database import DataBase
 
 
 CITY = 'Moscow'                                                     # Город для прогноза
@@ -52,7 +49,7 @@ def get_interval_for_forecast(mode='fit'):
         start_date = end_date - relativedelta(years=1, months=6)
     elif mode == 'predict':
         end_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - relativedelta(hours=1)
-        start_date = end_date + relativedelta(hours=1) - relativedelta(days=15) # todo: поправить кол-во дней, оно задается наверху, а тут хардкод
+        start_date = end_date + relativedelta(hours=1) - relativedelta(days=int(N_TIMESTEPS // 24))
     else:
         raise KeyError()
 
@@ -60,7 +57,8 @@ def get_interval_for_forecast(mode='fit'):
     return start_date, end_date
 
 
-def get_city_coordinates(city_name):
+def get_city_coordinates(city_name: str):
+    '''Получаем координаты города'''
     geolocator = Nominatim(user_agent="weather_data_fetcher")
     location = geolocator.geocode(city_name)
     return location.latitude, location.longitude
@@ -77,7 +75,15 @@ def get_city_coordinates(city_name):
 #     df.set_index('time', inplace=True)
 #     return df
 
-def get_dataset(city, timezone, start, end):
+def get_dataset(city: str, timezone: str, start: datetime, end: datetime) -> pd.DataFrame:
+    '''
+    Получаем pandas df по прогнозу параметров в определенном городе на определенном интервале времени
+    :param city: город
+    :param timezone: часовой пояс
+    :param start: начало интервала
+    :param end: конец интервала
+    :return: pd.DataFrame
+    '''
     print("start get_dataset")
     global FEATURES_COLUMNS
     global FEATURES_COLUMNS_START
@@ -110,7 +116,11 @@ def get_dataset(city, timezone, start, end):
 
 
 
-def scale_snow_column(series):
+def scale_snow_column(series: pd.Series) -> pd.Series:
+    '''
+    :param series: pd.Series с параметром snow
+    :return: pd.Series - применяем не к 0 значениям MinMaxScaler
+    '''
     print("start scale_snow_column")
     snow = series.copy().values.astype(float)
 
@@ -124,6 +134,15 @@ def scale_snow_column(series):
 
 
 def create_data(X, Y, n_timesteps, n_forecast, n_features):
+    '''
+    Формируем входные и выходные данные для модели
+    :param X: набор данных для прогноза
+    :param Y: набор прогнозируемых параметров
+    :param n_timesteps: размер окна
+    :param n_forecast: размер прогноза
+    :param n_features: кол-во признаков
+    :return:
+    '''
     print("start create_data")
     x_data = []
     y_data = []
@@ -143,6 +162,7 @@ def create_data(X, Y, n_timesteps, n_forecast, n_features):
 
 
 def create_model(X, Y, n_timesteps, n_forecast, n_features):
+    '''Создание модели'''
     print("start create_model")
     model = keras.Sequential([
         layers.LSTM(32, return_sequences=True, input_shape=(n_timesteps, n_features)),
@@ -166,6 +186,7 @@ def create_model(X, Y, n_timesteps, n_forecast, n_features):
 
 
 def save_history_fit(history):
+    '''Сохранение метрик с последнего шага обучения'''
     print("start save_history_fit")
     metrics = {'loss': 'Loss', 
                'mean_squared_error': 'MSE', 
@@ -187,7 +208,8 @@ def save_history_fit(history):
     return result
 
 
-def fit_model(city=CITY, timezone=TIMEZONE,  **kwargs):
+def fit_model(city=CITY, timezone=TIMEZONE, airflow_mode=True,  **kwargs):
+    '''Обучение модели'''
     print("start fit_model")
     start, end = get_interval_for_forecast() # Получаем начало и конец интервала для прогноза (1.5 года)
 
@@ -229,39 +251,36 @@ def fit_model(city=CITY, timezone=TIMEZONE,  **kwargs):
 
 
     os.makedirs('models', exist_ok=True)
-    model.save(f'models/model_{city}.keras')
+    if airflow_mode:
+        model.save(f'/opt/models/model_{city}.keras')
+    else:
+        model.save(f'./models/model_{city}.keras')
 
     return result_fit
 
 
-def load_metrics(city=CITY, airflow_mode=True, connection=None, **kwargs):
+def load_metrics(city=CITY, airflow_mode=True, db=None, **kwargs):
+    '''Загрузка полученных метрик с последнего шага обучения в БД'''
 
     if airflow_mode:
         from airflow.models import Variable
         ti = kwargs['ti']
         metrics = ti.xcom_pull(task_ids='fit_model')
 
-        connection, _ = lib.create_connect(host=Variable.get('host_db'),
-                                           port=Variable.get('port_db'),
-                                           user=Variable.get('user_db'),
-                                           password=Variable.get('password_db'),
-                                           database=Variable.get('name_db'))
+        db = DataBase(host=Variable.get('host_db'),
+                      port=Variable.get('port_db'),
+                      user=Variable.get('user_db'),
+                      password=Variable.get('password_db'),
+                      database=Variable.get('name_db'))
     else:
         metrics = fit_model()
 
     try:
-        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            table_name = f"model_{city.lower()}"
-            schema = 'metrics'
+        table_name = f"model_{city.lower()}"
+        schema = 'metrics'
 
-            cursor.execute(f"""
-                    INSERT INTO {schema}.{table_name} (
-                                        date,
-                                        loss, mse, r2, rmse)
-                    VALUES (%s, %s, %s, %s, %s);
-                """, (datetime.now().strftime("%Y-%m-%d"), *tuple(metrics.values())))
-        # Сохранение изменений
-        connection.commit()
+        metric_columns = ['date', 'loss', 'mse', 'r2', 'rmse']
+        db.insert(schema=schema, table_name=table_name, columns_list=metric_columns, data=(datetime.now().strftime("%Y-%m-%d"), metrics.values()))
 
         print(f"{city} load metrics GOOD!")
     except Exception as e:
@@ -269,6 +288,7 @@ def load_metrics(city=CITY, airflow_mode=True, connection=None, **kwargs):
 
 
 def get_window_min_max(arr, window_size=24):
+    '''Формируем набор минимальных и максимальных значений по дням, так как изначально у нас все по часам'''
     print('start get_window_min_max')
     # Разбить на окна и посчитать min и max в каждом
     chunks = [arr[i:i+window_size] for i in range(0, len(arr), window_size)]
@@ -277,7 +297,8 @@ def get_window_min_max(arr, window_size=24):
     return mins, maxs
 
 
-def get_predict(city=CITY, timezone=TIMEZONE, **kwargs):
+def get_predict(city=CITY, timezone=TIMEZONE, airflow_mode=True, **kwargs) -> pd.DataFrame:
+    '''Получаем прогноз'''
     start, end = get_interval_for_forecast(mode='predict')
 
     dataset = get_dataset(city, timezone, start, end)
@@ -312,7 +333,10 @@ def get_predict(city=CITY, timezone=TIMEZONE, **kwargs):
 
     X = np.array([X_window_scal])
 
-    model = tf.keras.models.load_model(f'models/model_{city}.keras')
+    if airflow_mode:
+        model = tf.keras.models.load_model(f'/opt/models/model_{city}.keras')
+    else:
+        model = tf.keras.models.load_model(f'models/model_{city}.keras')
 
     pred = model.predict(X)
     print(f"pred: {pred}")
@@ -344,36 +368,35 @@ def get_predict(city=CITY, timezone=TIMEZONE, **kwargs):
     return df
 
 
-def load_forecast(city=CITY, airflow_mode=True, connection=None, **kwargs):
+def load_forecast(city=CITY, airflow_mode=True, db=None, **kwargs):
+    '''Загружаем прогноз в БД'''
 
     if airflow_mode:
         from airflow.models import Variable
         ti = kwargs['ti']
         df_forecast = ti.xcom_pull(task_ids='get_predict')
 
-        connection, _ = lib.create_connect(host=Variable.get('host_db'),
-                                           port=Variable.get('port_db'),
-                                           user=Variable.get('user_db'),
-                                           password=Variable.get('password_db'),
-                                           database=Variable.get('name_db'))
+        db = DataBase(host=Variable.get('host_db'),
+                      port=Variable.get('port_db'),
+                      user=Variable.get('user_db'),
+                      password=Variable.get('password_db'),
+                      database=Variable.get('name_db'))
     else:
         df_forecast = get_predict()
 
     try:
-        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            table_name = f"forecast_{city.lower()}"
-            schema = 'predict'
+        table_name = f"forecast_{city.lower()}"
+        schema = 'predict'
+        columns_weather_list = [
+            "date",
+            "day1", "day2", "day3", "day4", "day5", "day6", "day7", "day8", "day9", "day10",
+            "night1", "night2", "night3", "night4", "night5", "night6", "night7", "night8", "night9", "night10",
+            "weather1", "weather2", "weather3", "weather4", "weather5", "weather6", "weather7", "weather8", "weather9",
+            "weather10"
+        ]
 
-            for index, row in df_forecast.iterrows():
-                cursor.execute(f"""
-                        INSERT INTO {schema}.{table_name} (
-                                            date,
-                                            day1,day2,day3,day4,day5,day6,day7,day8,day9,day10,
-                                            night1,night2,night3,night4,night5,night6,night7,night8,night9,night10)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """, (index, *tuple(row)))
-        # Сохранение изменений
-        connection.commit()
+        for row in df_forecast.itertuples(index=True, name=None):
+            db.insert(schema=schema, table_name=table_name, columns_list=columns_weather_list, data=row)
 
         print(f"{city} load forecast GOOD!")
     except Exception as e:

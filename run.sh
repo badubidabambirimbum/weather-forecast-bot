@@ -1,7 +1,15 @@
 #!/bin/bash
 
+if [ $1 == 'all' ]; then
+echo "docker-compose --env-file ./app/secret/secret.env down --rmi --volumes all"
+docker-compose --env-file ./app/secret/secret.env down --rmi --volumes all
+elif [ $1 == 'local' ]; then
+echo "docker-compose --env-file ./app/secret/secret.env down --rmi --volumes local"
+docker-compose --env-file ./app/secret/secret.env down --rmi --volumes local
+else
 echo "docker-compose --env-file ./app/secret/secret.env down --rmi local --volumes"
 docker-compose --env-file ./app/secret/secret.env down --rmi local --volumes
+fi
 
 echo "docker-compose --env-file ./app/secret/secret.env build"
 docker-compose --env-file ./app/secret/secret.env build
