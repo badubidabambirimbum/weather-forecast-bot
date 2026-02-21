@@ -13,18 +13,21 @@ from airflow.models import Variable
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
+sys.path.append('/opt/library')
 
 import library.airflow_functions as afl
 
 local_tz = timezone("Europe/Moscow")
 schedule = Variable.get("schedule_Ekaterinburg_GisMeteo")
 
-def notify_telegram_failure(context):
+def notify_telegram_failure(context):  # ← твоя таймзона
+    local_time = (context["logical_date"].in_timezone(local_tz).strftime("%Y-%m-%d %H:%M:%S"))
+
     message = (
         f"❌ Task failed!\n"
         f"DAG: {context['dag'].dag_id}\n"
         f"Task: {context['task_instance'].task_id}\n"
-        f"Execution date: {context['ts']}\n"
+        f"Execution date: {local_time}\n"
         f"Exception: {context.get('exception')}"
     )
     TelegramOperator(
@@ -115,7 +118,7 @@ telegram_message_success = TelegramOperator(
     text=(
         "✅ DAG succeeded!\n"
         "DAG: {{ dag.dag_id }}\n"
-        "Execution date: {{ ts }}"
+        "Execution date: {{ logical_date.in_timezone('Europe/Moscow').strftime('%Y-%m-%d %H:%M:%S') }}"
     ),
     dag=dag
 )

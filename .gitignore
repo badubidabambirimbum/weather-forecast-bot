@@ -13,3 +13,4 @@ psql
 secret
 *.env
 test.ipynb
+models
