@@ -62,7 +62,7 @@ class DataBase:
             self.logger.error(ex)
         return result
 
-    def insert(self, schema: str, table_name: str, columns_list: list, data: tuple) -> bool:
+    def insert(self, schema: str, table_name: str, columns_list: list, data: tuple) -> None:
         '''
         Вставка строки данных в таблицу
         :param schema:
@@ -87,10 +87,9 @@ class DataBase:
             # Сохранение изменений
             self.connection.commit()
             self.logger.info(f"Inserted {data} into {schema}.{table_name} successfully")
-            return True
         except Exception as ex:
             self.logger.error(ex)
-        return False
+            raise RuntimeError(f"Insert failed : {data} into {schema}.{table_name}") from ex
 
     def delete(self, schema: str, table_name: str, filter: str) -> bool:
         '''

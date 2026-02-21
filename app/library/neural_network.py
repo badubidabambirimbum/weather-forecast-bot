@@ -280,7 +280,10 @@ def load_metrics(city=CITY, airflow_mode=True, db=None, **kwargs):
         schema = 'metrics'
 
         metric_columns = ['date', 'loss', 'mse', 'r2', 'rmse']
-        db.insert(schema=schema, table_name=table_name, columns_list=metric_columns, data=(datetime.now().strftime("%Y-%m-%d"), metrics.values()))
+        db.insert(schema=schema,
+                  table_name=table_name,
+                  columns_list=metric_columns,
+                  data=(datetime.now().strftime("%Y-%m-%d"), *metrics.values()))
 
         print(f"{city} load metrics GOOD!")
     except Exception as e:
@@ -390,9 +393,7 @@ def load_forecast(city=CITY, airflow_mode=True, db=None, **kwargs):
         columns_weather_list = [
             "date",
             "day1", "day2", "day3", "day4", "day5", "day6", "day7", "day8", "day9", "day10",
-            "night1", "night2", "night3", "night4", "night5", "night6", "night7", "night8", "night9", "night10",
-            "weather1", "weather2", "weather3", "weather4", "weather5", "weather6", "weather7", "weather8", "weather9",
-            "weather10"
+            "night1", "night2", "night3", "night4", "night5", "night6", "night7", "night8", "night9", "night10"
         ]
 
         for row in df_forecast.itertuples(index=True, name=None):
