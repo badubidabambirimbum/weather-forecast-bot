@@ -15,7 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 import library.neural_network as nrl
 
 city = 'Ekaterinburg'
-timezone = 'Asia/Yekaterinburg'
+timezone_city = 'Asia/Yekaterinburg'
 local_tz = timezone("Europe/Moscow")
 schedule = Variable.get(f"schedule_Model_{city}")
 
@@ -55,7 +55,7 @@ dag = DAG(
     is_paused_upon_creation=True,
     tags=['Model', city],
     params={'city': city,
-            'timezone': timezone}
+            'timezone': timezone_city}
 )
 
 

@@ -35,7 +35,7 @@ N_TIMESTEPS = 15 * 24                                               # разме
 N_FEATURES = len(FEATURES_COLUMNS)                                  # кол-во признаков
 N_FORECAST = 10 * 24                                                # размер прогноза
 
-NUM_EPOCHS = 8                                                      # кол-во эпох для обучения
+NUM_EPOCHS = 5                                                      # кол-во эпох для обучения
 BATCH_SIZE = 32                                                     # размер пакета для обучения
 
 
