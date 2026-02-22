@@ -1,27 +1,23 @@
 import sys
 import os
 
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
-from tensorflow.keras.optimizers.schedules import PolynomialDecay
-
-from sklearn.preprocessing import MinMaxScaler  
-from sklearn.pipeline import make_pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import FunctionTransformer
-
 import numpy as np 
 import pandas as pd
 import requests
 
 from datetime import datetime
-from geopy.geocoders import Nominatim
 from dateutil.relativedelta import relativedelta
+from geopy import Nominatim
 
-sys.path.append('/opt/library')
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import FunctionTransformer
 
-from database import DataBase
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.optimizers.schedules import PolynomialDecay
 
 
 CITY = 'Moscow'                                                     # Город для прогноза
@@ -35,9 +31,8 @@ N_TIMESTEPS = 15 * 24                                               # разме
 N_FEATURES = len(FEATURES_COLUMNS)                                  # кол-во признаков
 N_FORECAST = 10 * 24                                                # размер прогноза
 
-NUM_EPOCHS = 5                                                      # кол-во эпох для обучения
+NUM_EPOCHS = 2                                                      # кол-во эпох для обучения
 BATCH_SIZE = 32                                                     # размер пакета для обучения
-
 
 def get_interval_for_forecast(mode='fit'):
     '''
@@ -163,6 +158,7 @@ def create_data(X, Y, n_timesteps, n_forecast, n_features):
 
 def create_model(X, Y, n_timesteps, n_forecast, n_features):
     '''Создание модели'''
+
     print("start create_model")
     model = keras.Sequential([
         layers.LSTM(32, return_sequences=True, input_shape=(n_timesteps, n_features)),
@@ -249,45 +245,13 @@ def fit_model(city=CITY, timezone=TIMEZONE, airflow_mode=True,  **kwargs):
     history = model.fit(X_train, y_train, batch_size=BATCH_SIZE, epochs=NUM_EPOCHS)
     result_fit = save_history_fit(history)
 
-
     os.makedirs('models', exist_ok=True)
     if airflow_mode:
-        model.save(f'/opt/models/model_{city}.keras')
+        model.save(f'/app/models/model_{city}.keras')
     else:
         model.save(f'./models/model_{city}.keras')
 
     return result_fit
-
-
-def load_metrics(city=CITY, airflow_mode=True, db=None, **kwargs):
-    '''Загрузка полученных метрик с последнего шага обучения в БД'''
-
-    if airflow_mode:
-        from airflow.models import Variable
-        ti = kwargs['ti']
-        metrics = ti.xcom_pull(task_ids='fit_model')
-
-        db = DataBase(host=Variable.get('host_db'),
-                      port=Variable.get('port_db'),
-                      user=Variable.get('user_db'),
-                      password=Variable.get('password_db'),
-                      database=Variable.get('name_db'))
-    else:
-        metrics = fit_model()
-
-    try:
-        table_name = f"model_{city.lower()}"
-        schema = 'metrics'
-
-        metric_columns = ['date', 'loss', 'mse', 'r2', 'rmse']
-        db.insert(schema=schema,
-                  table_name=table_name,
-                  columns_list=metric_columns,
-                  data=(datetime.now().strftime("%Y-%m-%d"), *metrics.values()))
-
-        print(f"{city} load metrics GOOD!")
-    except Exception as e:
-        raise ValueError(f"{city} load metrics ERROR!\n{e}")
 
 
 def get_window_min_max(arr, window_size=24):
@@ -337,7 +301,7 @@ def get_predict(city=CITY, timezone=TIMEZONE, airflow_mode=True, **kwargs) -> pd
     X = np.array([X_window_scal])
 
     if airflow_mode:
-        model = tf.keras.models.load_model(f'/opt/models/model_{city}.keras')
+        model = tf.keras.models.load_model(f'/app/models/model_{city}.keras')
     else:
         model = tf.keras.models.load_model(f'models/model_{city}.keras')
 
@@ -365,40 +329,4 @@ def get_predict(city=CITY, timezone=TIMEZONE, airflow_mode=True, **kwargs) -> pd
     for i in range(10):
         data[f'night{i + 1}'] = int(nights[i])
 
-    df = pd.DataFrame(data)
-    df.set_index('date', inplace=True)
-
-    return df
-
-
-def load_forecast(city=CITY, airflow_mode=True, db=None, **kwargs):
-    '''Загружаем прогноз в БД'''
-
-    if airflow_mode:
-        from airflow.models import Variable
-        ti = kwargs['ti']
-        df_forecast = ti.xcom_pull(task_ids='get_predict')
-
-        db = DataBase(host=Variable.get('host_db'),
-                      port=Variable.get('port_db'),
-                      user=Variable.get('user_db'),
-                      password=Variable.get('password_db'),
-                      database=Variable.get('name_db'))
-    else:
-        df_forecast = get_predict()
-
-    try:
-        table_name = f"forecast_{city.lower()}"
-        schema = 'predict'
-        columns_weather_list = [
-            "date",
-            "day1", "day2", "day3", "day4", "day5", "day6", "day7", "day8", "day9", "day10",
-            "night1", "night2", "night3", "night4", "night5", "night6", "night7", "night8", "night9", "night10"
-        ]
-
-        for row in df_forecast.itertuples(index=True, name=None):
-            db.insert(schema=schema, table_name=table_name, columns_list=columns_weather_list, data=row)
-
-        print(f"{city} load forecast GOOD!")
-    except Exception as e:
-        raise ValueError(f"{city} load forecast ERROR!\n{e}")
+    return data

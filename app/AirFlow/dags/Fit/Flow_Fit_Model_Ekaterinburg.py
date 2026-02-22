@@ -10,9 +10,10 @@ from airflow.models import Variable
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
+# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 
-import library.neural_network as nrl
+# import machine_learning.utils.neural_network as nrl
+import machine_learning.utils.ml_storage as ms
 
 city = 'Ekaterinburg'
 timezone_city = 'Asia/Yekaterinburg'
@@ -20,11 +21,13 @@ local_tz = timezone("Europe/Moscow")
 schedule = Variable.get(f"schedule_Model_{city}")
 
 def notify_telegram_failure(context):
+    local_time = (context["logical_date"].in_timezone(local_tz).strftime("%Y-%m-%d %H:%M:%S"))
+
     message = (
         f"❌ Task failed!\n"
         f"DAG: {context['dag'].dag_id}\n"
         f"Task: {context['task_instance'].task_id}\n"
-        f"Execution date: {context['ts']}\n"
+        f"Execution date: {local_time}\n"
         f"Exception: {context.get('exception')}"
     )
     TelegramOperator(
@@ -39,8 +42,8 @@ def notify_telegram_failure(context):
 default_args = {
     'owner': '@CHAO',                                   # Указывает владельца задачи
     'depends_on_past': False,                           # Если False, задача не зависит от успешного выполнения своего предыдущего запуска
-    'retries': 5,                                       # Количество попыток перезапуска задачи в случае её падения
-    'retry_delay': timedelta(minutes=60),               # Время ожидания между повторными попытками (5 минут).
+    'retries': 1,                                       # Количество попыток перезапуска задачи в случае её падения
+    'retry_delay': timedelta(minutes=1),                # Время ожидания между повторными попытками (5 минут).
     'on_failure_callback': notify_telegram_failure      # Функция notify_telegram_failure, которая будет вызвана при неудачном выполнении задачи
 }
 
@@ -72,7 +75,7 @@ fit_model = PythonOperator(
 
 load_metrics = PythonOperator(
     task_id='load_metrics',
-    python_callable=nrl.load_metrics,
+    python_callable=ms.load_metrics,
     op_kwargs={'city': "{{ params.city }}"},
     doc="Загрузка метрик обучения",
     dag=dag

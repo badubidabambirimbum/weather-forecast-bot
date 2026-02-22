@@ -14,6 +14,9 @@ fi
 echo "docker-compose --env-file ./app/secret/secret.env build"
 docker-compose --env-file ./app/secret/secret.env build
 
+echo "docker build -t ml_fit_model:latest -f DockerBuild/MachineLearning/Dockerfile.ml ."
+docker build -t ml_fit_model:latest -f DockerBuild/MachineLearning/Dockerfile.ml .
+
 echo "docker-compose --env-file ./app/secret/secret.env --profile init up airflow-init"
 docker-compose --env-file ./app/secret/secret.env --profile init up airflow-init
 

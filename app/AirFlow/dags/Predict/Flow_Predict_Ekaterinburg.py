@@ -3,22 +3,21 @@ from datetime import datetime, timedelta
 from pendulum import timezone
 
 from airflow.operators.python import PythonOperator
-from airflow.operators.bash import BashOperator
 from airflow.operators.dummy import DummyOperator
-from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.telegram.operators.telegram import TelegramOperator
 
 from airflow.models import Variable
 
 import sys
 import os
-# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
-# sys.path.append('/opt/library')
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 
-import weather_scrapers.collect_forecast_weather as cfw
+import library.neural_network as nrl
 
+city = 'Ekaterinburg'
+timezone_city = 'Asia/Yekaterinburg'
 local_tz = timezone("Europe/Moscow")
-schedule = Variable.get("schedule_Ekaterinburg_GisMeteo")
+schedule = Variable.get(f"schedule_Predict_{city}")
 
 def notify_telegram_failure(context):
     local_time = (context["logical_date"].in_timezone(local_tz).strftime("%Y-%m-%d %H:%M:%S"))
@@ -43,71 +42,41 @@ default_args = {
     'owner': '@CHAO',                                   # Указывает владельца задачи
     'depends_on_past': False,                           # Если False, задача не зависит от успешного выполнения своего предыдущего запуска
     'retries': 1,                                       # Количество попыток перезапуска задачи в случае её падения
-    'retry_delay': timedelta(minutes=30),               # Время ожидания между повторными попытками (5 минут).
+    'retry_delay': timedelta(minutes=1),                # Время ожидания между повторными попытками (5 минут).
     'on_failure_callback': notify_telegram_failure      # Функция notify_telegram_failure, которая будет вызвана при неудачном выполнении задачи
 }
 
 
 
 dag = DAG(
-    dag_id='Ekaterinburg_GisMeteo',
+    dag_id=f'Predict_{city}',
     start_date=datetime(2025, 4, 20, tzinfo=local_tz),
     schedule_interval=schedule,
     default_args=default_args,
     catchup=False,
     is_paused_upon_creation=True,
-    tags=['Ekaterinburg', 'GisMeteo'],
-    params={'table': 't_ekaterinburg_gismeteo',
-            'city': 'Ekaterinburg',
-            'type': 'GisMeteo'}
+    tags=['Predict', city],
+    params={'city': city,
+            'timezone': timezone_city}
 )
 
 
 start = DummyOperator(task_id='start')
 
-get_weather_forecast = PythonOperator(
-    task_id='get_weather_forecast',
-    python_callable=cfw.get_weather_forecast_GisMeteo,
-    op_kwargs={'city': "{{ params.city }}",
-               'type': "{{ params.type }}"},
-    doc="Получение данных с сайта",
+get_predict = PythonOperator(
+    task_id='get_predict',
+    python_callable=nrl.get_predict,
+    op_kwargs={'city'       : "{{ params.city }}",
+               'timezone'   : "{{ params.timezone }}"},
+    doc="Получение прогноза температуры воздуха",
     dag=dag
 )
 
-create_df = PythonOperator(
-    task_id='create_DF',
-    python_callable=cfw.create_today,
-    op_kwargs={'city': "{{ params.city }}",
-               'type': "{{ params.type }}",
-               'airflow_mode': True},
-    doc="Формирование df из одной строки с загруженными данными",
-    dag=dag
-)
-
-truncate_table = PostgresOperator(
-    task_id='truncate_backup_table',
-    postgres_conn_id='database_connect',
-    doc="TRUNCATE backup таблицы",
-    sql='''TRUNCATE TABLE backup.{{ params.table }}''',
-    dag=dag
-)
-
-insert_table = PostgresOperator(
-    task_id='insert_backup_table',
-    postgres_conn_id='database_connect',
-    doc="Заполнение backup таблицы",
-    sql='''INSERT INTO backup.{{ params.table }}
-            SELECT * FROM prom.{{ params.table }}''',
-    dag=dag
-)
-
-update_table = PythonOperator(
-    task_id='update_table',
-    python_callable=cfw.update,
-    op_kwargs={'city': "{{ params.city }}",
-               'type': "{{ params.type }}",
-               'airflow_mode': True},
-    doc="Добавление новых данных в таблицу",
+load_forecast = PythonOperator(
+    task_id='load_forecast',
+    python_callable=nrl.load_forecast,
+    op_kwargs={'city': "{{ params.city }}"},
+    doc="Загрузка прогноза температуры",
     dag=dag
 )
 
@@ -123,7 +92,4 @@ telegram_message_success = TelegramOperator(
     dag=dag
 )
 
-start >> [get_weather_forecast, truncate_table]
-get_weather_forecast >> create_df >> update_table
-truncate_table >> insert_table >> update_table
-update_table >> telegram_message_success
+start >> get_predict >> load_forecast >> telegram_message_success

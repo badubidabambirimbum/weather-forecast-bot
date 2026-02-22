@@ -1,17 +1,16 @@
 FROM python:3.11
 
-RUN apt-get update
+WORKDIR /app/src/telegram_bot
 
-WORKDIR /app/telegram_bot
-
-COPY ./app/telegram_bot/ .
-COPY ./app/library/ ./../library
-COPY ./DockerBuild/TelegramBot/requirements.txt   .
+COPY app/src/core /app/src/core
+COPY app/src/telegram_bot /app/src/telegram_bot
+COPY DockerBuild/TelegramBot/requirements.txt   .
 
 RUN python -m pip install --upgrade pip && pip install -r requirements.txt
 RUN rm requirements.txt
 
 ENV PYTHONUNBUFFERED=1
 ENV TZ=Europe/Moscow
+ENV PYTHONPATH=/app/src:{$PYTHONPATH}
 
-CMD ["python3", "telegram_bot.py"]
+CMD ["python3", "tg_bot.py"]

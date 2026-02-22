@@ -5,10 +5,9 @@ from datetime import datetime
 import re
 import sys
 
-sys.path.append('/opt/library')
 print(f"sys.path: {sys.path}")
 
-from database import DataBase
+from core.database import DataBase
 
 CITIES_URL = {
     "GisMeteo":

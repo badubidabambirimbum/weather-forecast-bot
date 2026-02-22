@@ -1,7 +1,7 @@
 from typing import List
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from logger import create_logger
+from core.logger import create_logger
 
 class DataBase:
     def __init__(self, host: str, port: str, user: str, password: str, database: str, logger=None):

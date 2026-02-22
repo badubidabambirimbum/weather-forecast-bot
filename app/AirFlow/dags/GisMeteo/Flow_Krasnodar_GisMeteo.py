@@ -20,11 +20,13 @@ local_tz = timezone("Europe/Moscow")
 schedule = Variable.get("schedule_Krasnodar_GisMeteo")
 
 def notify_telegram_failure(context):
+    local_time = (context["logical_date"].in_timezone(local_tz).strftime("%Y-%m-%d %H:%M:%S"))
+
     message = (
         f"❌ Task failed!\n"
         f"DAG: {context['dag'].dag_id}\n"
         f"Task: {context['task_instance'].task_id}\n"
-        f"Execution date: {context['ts']}\n"
+        f"Execution date: {local_time}\n"
         f"Exception: {context.get('exception')}"
     )
     TelegramOperator(
