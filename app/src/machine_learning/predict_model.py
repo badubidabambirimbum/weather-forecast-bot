@@ -1,5 +1,6 @@
 import json
 import argparse
+import time
 import utils.neural_network as n
 
 
@@ -22,4 +23,5 @@ def main():
 if __name__ == '__main__':
     forecast = main()
     print("===RESULT===")
+    time.sleep(5)
     print(json.dumps(forecast))

@@ -12,6 +12,7 @@ def load_metrics(city, airflow_mode=True, db=None, **kwargs):
         from airflow.models import Variable
         ti = kwargs['ti']
         metrics_str = ti.xcom_pull(task_ids='fit_model')
+        print('metrics_str:', metrics_str)
         metrics_dict = json.loads(metrics_str)
 
         db = DataBase(host=Variable.get('host_db'),
@@ -45,6 +46,7 @@ def load_forecast(city, airflow_mode=True, db=None, **kwargs):
         from airflow.models import Variable
         ti = kwargs['ti']
         data_str = ti.xcom_pull(task_ids='get_predict')
+        print('data_str:', data_str)
         data_dict = json.loads(data_str)
 
         db = DataBase(host=Variable.get('host_db'),
