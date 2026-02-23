@@ -26,7 +26,7 @@ x-airflow-common:
     - ./app/src/core:/opt/src/core
     - ./app/src/weather_scrapers:/opt/src/weather_scrapers
     - ./app/src/machine_learning:/opt/src/machine_learning
-    - ./models:/opt/src/machine_learning/models
+    - ./models:/opt/src/models
     - /var/run/docker.sock:/var/run/docker.sock
   networks:
       - telegram_bot_network

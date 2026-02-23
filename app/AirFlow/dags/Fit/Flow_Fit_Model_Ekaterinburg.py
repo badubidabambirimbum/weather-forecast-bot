@@ -14,7 +14,7 @@ import sys
 import os
 
 import machine_learning.utils.ml_storage as ms
-from airflow.utils.callback import notify_telegram_failure
+from utils.callback import notify_telegram_failure
 
 city = 'Ekaterinburg'
 timezone_city = 'Asia/Yekaterinburg'
@@ -50,7 +50,7 @@ start = DummyOperator(task_id='start')
 fit_model = DockerOperator(
     task_id="fit_model",
     image="ml_fit_model:latest",
-    command="python fit_model.py --city {{ params.city }} --timezone {{ params.timezone }}",
+    command="python fit_model.py --city {{ params.city }} --timezone {{ params.timezone }} --airflow_mode",
     dag=dag,
     docker_url="unix://var/run/docker.sock",
     mounts=[

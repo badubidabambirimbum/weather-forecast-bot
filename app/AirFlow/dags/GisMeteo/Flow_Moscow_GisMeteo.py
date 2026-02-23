@@ -15,7 +15,7 @@ import os
 # sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 
 import weather_scrapers.collect_forecast_weather as cfw
-from airflow.utils.callback import notify_telegram_failure
+from utils.callback import notify_telegram_failure
 
 local_tz = timezone("Europe/Moscow")
 schedule = Variable.get("schedule_Moscow_GisMeteo")

@@ -9,4 +9,3 @@ RUN pip install "apache-airflow==${AIRFLOW_VERSION}" apache-airflow-providers-do
 COPY ./app/secret/variables.json /opt/airflow/variables.json
 
 ENV PYTHONPATH=/opt/src:${PYTHONPATH}
-ENV PYTHONPATH=/opt:${PYTHONPATH}
