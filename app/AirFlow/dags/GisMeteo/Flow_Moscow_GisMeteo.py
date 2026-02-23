@@ -12,30 +12,13 @@ from airflow.models import Variable
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
+# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 
-import library.airflow_functions as afl
+import weather_scrapers.collect_forecast_weather as cfw
+from airflow.utils.callback import notify_telegram_failure
 
 local_tz = timezone("Europe/Moscow")
 schedule = Variable.get("schedule_Moscow_GisMeteo")
-
-def notify_telegram_failure(context):
-    local_time = (context["logical_date"].in_timezone(local_tz).strftime("%Y-%m-%d %H:%M:%S"))
-
-    message = (
-        f"❌ Task failed!\n"
-        f"DAG: {context['dag'].dag_id}\n"
-        f"Task: {context['task_instance'].task_id}\n"
-        f"Execution date: {local_time}\n"
-        f"Exception: {context.get('exception')}"
-    )
-    TelegramOperator(
-        task_id='notify_failure',
-        token=Variable.get("telegram_token"),
-        chat_id=Variable.get("telegram_chat_id"),
-        text=message,
-        dag=context['dag'],
-    ).execute(context=context)
 
 
 default_args = {
@@ -66,7 +49,7 @@ start = DummyOperator(task_id='start')
 
 get_weather_forecast = PythonOperator(
     task_id='get_weather_forecast',
-    python_callable=afl.get_weather_forecast_GisMeteo,
+    python_callable=cfw.get_weather_forecast_GisMeteo,
     op_kwargs={'city': "{{ params.city }}",
                'type': "{{ params.type }}"},
     doc="Получение данных с сайта",
@@ -75,7 +58,7 @@ get_weather_forecast = PythonOperator(
 
 create_df = PythonOperator(
     task_id='create_DF',
-    python_callable=afl.create_today,
+    python_callable=cfw.create_today,
     op_kwargs={'city': "{{ params.city }}",
                'type': "{{ params.type }}",
                'airflow_mode': True},
@@ -102,7 +85,7 @@ insert_table = PostgresOperator(
 
 update_table = PythonOperator(
     task_id='update_table',
-    python_callable=afl.update,
+    python_callable=cfw.update,
     op_kwargs={'city': "{{ params.city }}",
                'type': "{{ params.type }}",
                'airflow_mode': True},
@@ -117,7 +100,7 @@ telegram_message_success = TelegramOperator(
     text=(
         "✅ DAG succeeded!\n"
         "DAG: {{ dag.dag_id }}\n"
-        "Execution date: {{ ts }}"
+        "Execution date: {{ logical_date.in_timezone('Europe/Moscow').strftime('%Y-%m-%d %H:%M:%S') }}"
     ),
     dag=dag
 )

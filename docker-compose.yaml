@@ -22,6 +22,7 @@ x-airflow-common:
     - ./app/AirFlow/dags:/opt/airflow/dags
     - ./app/AirFlow/logs:/opt/airflow/logs
     - ./app/AirFlow/plugins:/opt/airflow/plugins
+    - ./app/AirFlow/utils:/opt/airflow/utils
     - ./app/src/core:/opt/src/core
     - ./app/src/weather_scrapers:/opt/src/weather_scrapers
     - ./app/src/machine_learning:/opt/src/machine_learning

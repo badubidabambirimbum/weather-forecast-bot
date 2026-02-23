@@ -15,29 +15,12 @@ import os
 # sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 
 import machine_learning.utils.ml_storage as ms
+from airflow.utils.callback import notify_telegram_failure
 
 city = 'Moscow'
 timezone_city = 'Europe/Moscow'
 local_tz = timezone("Europe/Moscow")
 schedule = Variable.get(f"schedule_Model_{city}")
-
-def notify_telegram_failure(context):
-    local_time = (context["logical_date"].in_timezone(local_tz).strftime("%Y-%m-%d %H:%M:%S"))
-
-    message = (
-        f"❌ Task failed!\n"
-        f"DAG: {context['dag'].dag_id}\n"
-        f"Task: {context['task_instance'].task_id}\n"
-        f"Execution date: {local_time}\n"
-        f"Exception: {context.get('exception')}"
-    )
-    TelegramOperator(
-        task_id='notify_failure',
-        token=Variable.get("telegram_token"),
-        chat_id=Variable.get("telegram_chat_id"),
-        text=message,
-        dag=context['dag'],
-    ).execute(context=context)
 
 
 default_args = {
@@ -107,7 +90,7 @@ telegram_message_success = TelegramOperator(
     text=(
         "✅ DAG succeeded!\n"
         "DAG: {{ dag.dag_id }}\n"
-        "Execution date: {{ ts }}"
+        "Execution date: {{ logical_date.in_timezone('Europe/Moscow').strftime('%Y-%m-%d %H:%M:%S') }}"
     ),
     dag=dag
 )

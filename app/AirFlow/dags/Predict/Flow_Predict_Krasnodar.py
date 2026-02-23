@@ -5,37 +5,22 @@ from pendulum import timezone
 from airflow.operators.python import PythonOperator
 from airflow.operators.dummy import DummyOperator
 from airflow.providers.telegram.operators.telegram import TelegramOperator
+from airflow.providers.docker.operators.docker import DockerOperator
+from docker.types import Mount
 
 from airflow.models import Variable
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
+# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 
-import library.neural_network as nrl
+import machine_learning.utils.ml_storage as ms
+from airflow.utils.callback import notify_telegram_failure
 
 city = 'Krasnodar'
 timezone_city = 'Europe/Moscow'
 local_tz = timezone("Europe/Moscow")
 schedule = Variable.get(f"schedule_Predict_{city}")
-
-def notify_telegram_failure(context):
-    local_time = (context["logical_date"].in_timezone(local_tz).strftime("%Y-%m-%d %H:%M:%S"))
-
-    message = (
-        f"❌ Task failed!\n"
-        f"DAG: {context['dag'].dag_id}\n"
-        f"Task: {context['task_instance'].task_id}\n"
-        f"Execution date: {local_time}\n"
-        f"Exception: {context.get('exception')}"
-    )
-    TelegramOperator(
-        task_id='notify_failure',
-        token=Variable.get("telegram_token"),
-        chat_id=Variable.get("telegram_chat_id"),
-        text=message,
-        dag=context['dag'],
-    ).execute(context=context)
 
 
 default_args = {
@@ -63,18 +48,27 @@ dag = DAG(
 
 start = DummyOperator(task_id='start')
 
-get_predict = PythonOperator(
-    task_id='get_predict',
-    python_callable=nrl.get_predict,
-    op_kwargs={'city'       : "{{ params.city }}",
-               'timezone'   : "{{ params.timezone }}"},
-    doc="Получение прогноза температуры воздуха",
-    dag=dag
+get_predict = DockerOperator(
+    task_id="get_predict",
+    image="ml_fit_model:latest",
+    command="python predict_model.py --city {{ params.city }} --timezone {{ params.timezone }}",
+    dag=dag,
+    docker_url="unix://var/run/docker.sock",
+    mounts=[
+        Mount(
+            source="/Users/alexey/PycharmProjects/weather-forecast-bot/models",     # путь на хосте
+            target="/app/models",                                                   # путь в контейнере
+            type="bind"
+        )
+    ],
+    auto_remove=True,
+    do_xcom_push=True,
+    mount_tmp_dir=False,
 )
 
 load_forecast = PythonOperator(
     task_id='load_forecast',
-    python_callable=nrl.load_forecast,
+    python_callable=ms.load_forecast,
     op_kwargs={'city': "{{ params.city }}"},
     doc="Загрузка прогноза температуры",
     dag=dag
