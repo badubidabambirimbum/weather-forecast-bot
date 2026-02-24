@@ -85,7 +85,7 @@ insert_table = PostgresOperator(
 
 update_table = PythonOperator(
     task_id='update_table',
-    python_callable=cfw.update,
+    python_callable=cfw.update_table,
     op_kwargs={'city': "{{ params.city }}",
                'type': "{{ params.type }}",
                'airflow_mode': True},

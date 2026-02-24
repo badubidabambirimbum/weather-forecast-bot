@@ -84,7 +84,7 @@ async def scheduled_notification():
     rows = db.execute_query(select_sub)
     for row in rows:
         try:
-            await bot.send_message(row["id"], text=lib.create_forecast(row["city"], 1, 1, db), parse_mode='HTML')
+            await bot.send_message(row["id"], text=lib.create_forecast(row["city"], 1, 1, db, 'model'), parse_mode='HTML')
         except Exception as e:
             logger.error(f"Не удалось отправить сообщение пользователю {row['id']}: {e}")
             await bot.send_message(chat_id=log_id,
@@ -214,8 +214,8 @@ async def start_message(message: types.Message):
     if len(rows) == 0:
         db.insert('prom',
                   'all_users',
-                  ['id', 'username', 'date'],
-                  (str(user_id), str(message.from_user.username), str(datetime.now().strftime('%Y-%m-%d')))
+                  ['id', 'username', 'id_source', 'date'],
+                  (str(user_id), str(message.from_user.username), '1', str(datetime.now().strftime('%Y-%m-%d')))
                   )
 
         print(f"Новый пользователь: {message.from_user.username}!!!")
@@ -359,7 +359,8 @@ async def check_datasets(message: types.Message):
         text = ""
         for type in SET_TYPES:
             for city in SET_CITIES:
-                text += f"{len(lib.view(TRANSLATE_CITIES[city], type, db, key='all'))} {city} {type} \n"
+                table_name = f"t_{city}_{type}"
+                text += f"{len(lib.view(table_name, db, key='all'))} {city} {type} \n"
         await bot.send_message(chat_id=admin_id,
                                text=text)
     else:
@@ -377,11 +378,11 @@ async def database_all_users(message: types.Message):
     if user_id == admin_id:
         select_sub = f"SELECT * FROM prom.all_users;"
         rows = db.execute_query(select_sub)
-        names = ['id', 'username', 'date']
-        text = f"{str(names[0]):^25} {str(names[1]):^25} {str(names[2]):^15} \n"
+        names = ['id', 'username', 'id_source', 'date']
+        text = f"{str(names[0]):^25} {str(names[1]):^25} {str(names[2]):^15} {str(names[3]):^15}\n"
 
         for row in rows:
-            text += f"{str(row['id']):^10} {str(row['username']):^15} {str(row['date']):<15} \n"
+            text += f"{str(row['id']):^10} {str(row['username']):^15} {str(row['id_source']):^15} {str(row['date']):<15} \n"
 
         await bot.send_message(chat_id=admin_id,
                                text=text)
@@ -515,7 +516,7 @@ async def callback_message(callback: types.CallbackQuery):
     await callback.message.delete_reply_markup()
     city, dist = callback.data.split()
     try:
-        forecast_txt = lib.create_forecast(city, dist, 10, db)
+        forecast_txt = lib.create_forecast(city, dist, 10, db, 'model')
     except Exception as e:
         print(f'Ошибка:{e}')
         forecast_txt = f"Прогноз погоды на {dist} дней недоступен!"

@@ -91,7 +91,7 @@ class DataBase:
             self.logger.error(ex)
             raise RuntimeError(f"Insert failed : {data} into {schema}.{table_name}") from ex
 
-    def delete(self, schema: str, table_name: str, filter: str) -> bool:
+    def delete(self, schema: str, table_name: str, filter: str) -> None:
         '''
         Удаление из таблицы по фильтру
         :param schema:
@@ -107,7 +107,31 @@ class DataBase:
                 cursor.execute(sql)
             self.connection.commit()
             self.logger.info(f"Deleted {filter} from {schema}.{table_name} successfully")
-            return True
         except Exception as ex:
             self.logger.error(ex)
-        return False
+            raise RuntimeError(f"Delete failed : {ex}") from ex
+
+    def update(self, schema: str, table_name: str, set_query: str, filter: str) -> None:
+        '''
+        Обновление таблицы
+        :param schema:
+        :param table_name:
+        :param set_query: Новое значение;
+        :param filter: Что должно идти после WHERE в SQL запрос.
+        :return:
+        '''
+        self.logger.info(f"Updating from {schema}.{table_name}")
+        sql = """
+        UPDATE {schema}.{table_name} 
+        SET {set_query} 
+        WHERE {filter};
+        """.format(schema=schema, table_name=table_name, set_query=set_query, filter=filter)
+        self.logger.info(f"SQL:\n {sql}")
+        try:
+            with self.connection.cursor() as cursor:
+                cursor.execute(sql)
+            self.connection.commit()
+            self.logger.info(f"Updated {filter} from {schema}.{table_name} successfully")
+        except Exception as ex:
+            self.logger.error(ex)
+            raise RuntimeError(f"Update failed : {ex}") from ex

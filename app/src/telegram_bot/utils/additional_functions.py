@@ -9,10 +9,9 @@ from core.database import DataBase
 
 import functools
 
-def view(city: str, type: str, db: DataBase, schema='prom', key="tail", OrderBy_column='date'):
+def view(table_name: str, db: DataBase, schema='prom', key="tail", OrderBy_column='date'):
     '''Просмотр таблицы по городу и сайту'''
 
-    table_name = f"t_{city}_{type}"
     query = f"SELECT * FROM {schema}.{table_name} order by {OrderBy_column};"
     rows = db.execute_query(query)
 
@@ -31,12 +30,20 @@ def view(city: str, type: str, db: DataBase, schema='prom', key="tail", OrderBy_
         raise KeyError("key Error!")
 
 
-def create_forecast(city, dist, period, db):
+def create_forecast(city, dist, period, db, forecast_source):
     '''формирование строки с прогнозом'''
 
-    forecast_Yandex = view(TRANSLATE_CITIES[city], "Yandex", db, key='all').iloc[-1]
-    forecast_GisMeteo = view(TRANSLATE_CITIES[city], "GisMeteo", db, key='all').iloc[-1]
-    date_forecast = view(TRANSLATE_CITIES[city], "GisMeteo", db, key='all').index[-1]
+    forecast_Yandex = view(f"t_{TRANSLATE_CITIES[city]}_Yandex", db, key='all').iloc[-1]
+    forecast_GisMeteo = view(f"t_{TRANSLATE_CITIES[city]}_GisMeteo", db, key='all').iloc[-1]
+
+    if forecast_source == 'model':
+        date_forecast = view(f"predict_{TRANSLATE_CITIES[city].lower()}", db, schema='predict', key='all').index[-1]
+    elif forecast_source == 'yandex':
+        date_forecast = view(f"t_{TRANSLATE_CITIES[city]}_Yandex", db, schema='predict', key='all').index[-1]
+    elif forecast_source == 'gismeteo':
+        date_forecast = view(f"t_{TRANSLATE_CITIES[city]}_GisMeteo", db, schema='predict', key='all').index[-1]
+    else:
+        raise KeyError("date_flag Error!")
 
     future_dates = pd.date_range(start=date_forecast, periods=period)
     forecast_data = ""

@@ -247,7 +247,7 @@ def create_new_day(city:str, type:str, year:int, month:int, day:int, list_days:l
         db.insert(schema=schema, table_name=table_name, columns_list=columns_weather_list, data=row)
 
 
-def update(city, type, db=None, airflow_mode=False, **kwargs):
+def update_table(city, type, db=None, airflow_mode=False, **kwargs):
     '''Обновление таблицы по указанному городу и сайту'''
 
     city = city.lower()

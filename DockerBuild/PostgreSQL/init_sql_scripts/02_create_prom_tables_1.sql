@@ -213,14 +213,17 @@ CREATE TABLE prom.t_krasnodar_yandex (
 );
 
 -- all_users
+
 CREATE TABLE prom.all_users (
  id_users serial4 NOT NULL,
  id int4 NOT NULL,
  username varchar(45) NOT NULL,
+ id_source int4 NOT NULL,
  "date" date NOT NULL,
  CONSTRAINT all_users_id_key UNIQUE (id),
  CONSTRAINT all_users_pkey PRIMARY KEY (id_users)
 );
+
 
 CREATE TABLE prom.subscribers (
  id_subscribers serial4 NOT NULL,
@@ -232,6 +235,17 @@ CREATE TABLE prom.subscribers (
 );
 
 ALTER TABLE prom.subscribers ADD CONSTRAINT fk_all_users FOREIGN KEY (id) REFERENCES prom.all_users(id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+CREATE TABLE prom.forecast_sources (
+    id_source serial4 PRIMARY KEY,
+    source_name varchar(30) NOT NULL UNIQUE
+);
+
+INSERT INTO prom.forecast_sources (source_name)
+VALUES ('model'), ('yandex'), ('gismeteo');
+
+ALTER TABLE prom.all_users ADD CONSTRAINT fk_users_forecast_source FOREIGN KEY (id_source) REFERENCES prom.forecast_sources(id_source) ON UPDATE CASCADE;
 
 -- metrics
 
