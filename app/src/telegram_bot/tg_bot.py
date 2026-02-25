@@ -1,3 +1,5 @@
+import logging
+
 from aiogram import Bot, types, Dispatcher, executor
 from typing import Literal
 # import secret.auth_data as s  # API KEY, ADMIN ID, LOG ID, ...
@@ -118,7 +120,7 @@ async def add_user(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar', None], m
                   (str(user_id), str(datetime.now().strftime('%Y-%m-%d')), str(city))
                   )
 
-        print(f"Новая подписка на оповещение о погоде: {message.from_user.username}")
+        logger.info(f"Новая подписка на оповещение о погоде: {message.from_user.username}")
         await bot.send_message(chat_id=log_id,
                                text=f"✅ Новая подписка на оповещение о погоде: {message.from_user.username}",
                                parse_mode='HTML')
@@ -175,6 +177,10 @@ async def help_message(message: types.Message):
                 '❓ <b>Что означают смайлики погоды?</b> \n' \
                 '▪️<i>Введи</i> <b>/weather</b> \n' \
                 ' \n' \
+                '❓ <b>Можно ли выбрать другой источник прогноза температуры?</b> \n' \
+                '▪️<i>Да, надо ввести команду</i> <b>/update (название источника)</b>' \
+                '▪️<i>В данный момент доступно 3 источника:</i> <b>Model</b>, <b>Yandex</b>, <b>GisMeteo</b>' \
+                ' \n' \
                 '❓ <b>А у вас есть возможность рассылки✉️ прогноза?</b> \n' \
                 '▪️<i>Конечно! для подписки на рассылку введи</i> <b>+(Название города)</b> \n' \
                 '▪️<i>Пример: +Москва</i> \n' \
@@ -218,7 +224,7 @@ async def start_message(message: types.Message):
                   (str(user_id), str(message.from_user.username), '1', str(datetime.now().strftime('%Y-%m-%d')))
                   )
 
-        print(f"Новый пользователь: {message.from_user.username}!!!")
+        logger.info(f"Новый пользователь: {message.from_user.username}!!!")
         await bot.send_message(chat_id=log_id,
                                text=f"🆕 Новый пользователь: {message.from_user.username}!!!",
                                parse_mode='HTML')
@@ -237,6 +243,45 @@ async def start_message(message: types.Message):
 async def cities_message(message: types.Message):
     logger.info(f'called by the user {message.from_user.id}')
     await message.answer(text=f"Доступные города ⚡️", reply_markup=kb)
+
+
+@dp.message_handler(commands=["update"])
+@lib.log_function(logger=logger)
+async def cities_message(message: types.Message):
+    logger.info(f'called by the user {message.from_user.id}')
+
+    args = message.get_args()
+
+    try:
+        source_name_new = str(args).lower()
+
+        row_new = db.execute_query(query=f'select id_source from prom.forecast_sources where source_name = {source_name_new}')
+        id_source_new = row_new[0]['id_source']
+
+        row_old = db.execute_query(
+            query=f'''
+            select 
+                a.id_source, f.source_name
+            from 
+                prom.all_users as a
+            left join 
+                prom.forecast_sources as f
+            on
+                a.id_source = f.id_source
+            where 
+                id = {str(message.from_user.id)}''')
+
+        id_source_old = row_old[0]['id_source']
+        source_name_old = row_old[0]['source_name']
+
+        if id_source_old == id_source_new:
+            await message.reply(f"Вы уже используете источник {source_name_old}!")
+        else:
+            db.update(schema='prom', table_name='all_users', set_query=f'id_source = {str(id_source_new)}', filter=f"id = {str(message.from_user.id)}")
+            await message.reply(f"Вы успешно изменили источник с {source_name_old} на {source_name_new}!")
+
+    except ValueError:
+        await message.reply("Что-то пошло не так. Пример использования: /update model")
 
 
 @dp.message_handler(commands=["weather"])
@@ -294,7 +339,7 @@ async def remove_message(message: types.Message):
         filter = 'id = {user_id}'.format(user_id=str(user_id))
         db.delete('prom', 'subscribers', filter)
 
-        print(f"Отписка: {message.from_user.username}")
+        logger.warning(f"Отписка: {message.from_user.username}")
         await bot.send_message(chat_id=log_id,
                                text=f"❗️ Отписка: {message.from_user.username}",
                                parse_mode='HTML')
@@ -424,7 +469,7 @@ async def off_bot(message: types.Message):
     if user_id == admin_id:
         await bot.send_message(log_id, text=f"🤖 <b>выключен</b>!", parse_mode='HTML')
         db.close_connection()
-        print(f"{datetime.now()} Бот выключен!")
+        logging.warning(f"{datetime.now()} Бот выключен!")
         sys.exit(0)
     else:
         await bot.send_message(chat_id=user_id,
@@ -516,9 +561,25 @@ async def callback_message(callback: types.CallbackQuery):
     await callback.message.delete_reply_markup()
     city, dist = callback.data.split()
     try:
-        forecast_txt = lib.create_forecast(city, dist, 10, db, 'model')
+        user_id = str(callback.from_user.id)
+        row = db.execute_query(
+            query=f'''
+            select 
+                f.source_name
+            from 
+                prom.all_users as a
+            left join 
+                prom.forecast_sources as f
+            on
+                a.id_source = f.id_source
+            where 
+                id = {user_id}''')
+
+        source_name = row[0]['source_name']
+
+        forecast_txt = lib.create_forecast(city, dist, 10, db, source_name)
     except Exception as e:
-        print(f'Ошибка:{e}')
+        logger.error(e)
         forecast_txt = f"Прогноз погоды на {dist} дней недоступен!"
 
     await bot.send_message(callback.from_user.id, text=f'Прогноз в городе {city} на {dist} дней:')
