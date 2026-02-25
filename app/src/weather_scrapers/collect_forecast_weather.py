@@ -20,41 +20,6 @@ CITIES_URL = {
          "Ekaterinburg": 'https://yandex.ru/weather?lat=56.8380127&lon=60.59747314'}}
 
 
-# def get_weather_forecast_Yandex(city, type='Yandex', **kwargs):
-#     '''Получение данных с сайта Yandex'''
-#
-#     city_url = CITIES_URL[type][city]
-#
-#     headers = requests.utils.default_headers()
-#
-#     headers.update(
-#         {
-#             'User-Agent': 'My User Agent 1.0',
-#         }
-#     )
-#     response = requests.get(city_url, headers=headers)
-#     soup = BeautifulSoup(response.content, 'html.parser')
-#
-#     temp_max = soup.find_all('div', class_='temp forecast-briefly__temp forecast-briefly__temp_day')
-#     temp_min = soup.find_all('div', class_='temp forecast-briefly__temp forecast-briefly__temp_night')
-#     weather = soup.find_all('div', class_='forecast-briefly__condition')
-#
-#     forecast_data = []
-#
-#     for i in range(1, 11):
-#         max_temp = temp_max[i].find('span', class_='temp__value temp__value_with-unit').get_text(strip=True)
-#         min_temp = temp_min[i].find('span', class_='temp__value temp__value_with-unit').get_text(strip=True)
-#         weather_today = weather[i].get_text(strip=True)
-#
-#         forecast_data.append({
-#             'max_temp': max_temp,
-#             'min_temp': min_temp,
-#             'weather': weather_today
-#         })
-#
-#     return forecast_data
-
-
 def get_weather_forecast_Yandex(city, type='Yandex', **kwargs):
     '''Получение данных с сайта Yandex'''
 
@@ -94,6 +59,10 @@ def get_weather_forecast_Yandex(city, type='Yandex', **kwargs):
         '2': 'Ливень',
         '12': 'Небольшой дождь',
         '13': 'Дождь',
+        '15': 'Небольшой снег',
+        '16': 'Снег',
+        '17': 'Снег',
+        '18': 'Дождь со снегом',
         '21': 'Дождь с грозой',
         '23': 'Облачно с прояснениями',
         '25': 'Пасмурно',
@@ -144,40 +113,6 @@ def get_weather_forecast_GisMeteo(city, type, **kwargs):
     }
 
     return forecast_data
-
-# def get_weather_forecast_GisMeteo(city, type, **kwargs):
-#     '''Получение данных с сайта GisMeteo'''
-#
-#     city_url = CITIES_URL[type][city]
-#
-#     headers = requests.utils.default_headers()
-#
-#     headers.update(
-#         {
-#             'User-Agent': 'My User Agent 1.0',
-#         }
-#     )
-#     response = requests.get(city_url, headers=headers)
-#     soup = BeautifulSoup(response.content, 'html.parser')
-#
-#     temp_max = soup.find_all('div', class_='maxt')
-#     temp_min = soup.find_all('div', class_='mint')
-#     weather = soup.find_all('div', class_='row-item')
-#
-#     forecast_data = []
-#
-#     for i in range(10):
-#         max_temp = temp_max[i].find('temperature-value')["value"]
-#         min_temp = temp_min[i].find('temperature-value')["value"]
-#         weather_today = weather[i]['data-tooltip']
-#
-#         forecast_data.append({
-#             'max_temp': max_temp,
-#             'min_temp': min_temp,
-#             'weather': weather_today
-#         })
-#
-#     return forecast_data
 
 
 def create_today(city, type, airflow_mode=False, today=datetime.now().strftime('%Y-%m-%d'), **kwargs):
