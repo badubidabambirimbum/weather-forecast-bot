@@ -18,7 +18,7 @@ def create_logger(log_dir='logs', log_level=logging.DEBUG):
     script_name = os.path.splitext(os.path.basename(sys.argv[0]))[0]
 
     # Формируем имя лог файла
-    log_filename = f"{script_name}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+    log_filename = f"{script_name}_{datetime.now().strftime('%Y-%m-%d')}.log"
     log_file_path = os.path.join(log_dir, log_filename)
 
     # Создаем логгер

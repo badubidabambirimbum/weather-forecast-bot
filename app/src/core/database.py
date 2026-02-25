@@ -60,6 +60,7 @@ class DataBase:
             self.logger.info(f"Query executed successfully")
         except Exception as ex:
             self.logger.error(ex)
+            raise RuntimeError(f"Execute query failed : {ex}") from ex
         return result
 
     def insert(self, schema: str, table_name: str, columns_list: list, data: tuple) -> None:
@@ -131,7 +132,7 @@ class DataBase:
             with self.connection.cursor() as cursor:
                 cursor.execute(sql)
             self.connection.commit()
-            self.logger.info(f"Updated {filter} from {schema}.{table_name} successfully")
+            self.logger.info(f"Updated {set_query} WHERE {filter} from {schema}.{table_name} successfully")
         except Exception as ex:
             self.logger.error(ex)
             raise RuntimeError(f"Update failed : {ex}") from ex
