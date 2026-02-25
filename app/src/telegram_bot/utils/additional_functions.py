@@ -37,11 +37,14 @@ def create_forecast(city, dist, period, db, forecast_source):
     forecast_GisMeteo = view(f"t_{TRANSLATE_CITIES[city]}_GisMeteo", db, key='all').iloc[-1]
 
     if forecast_source == 'model':
-        date_forecast = view(f"predict_{TRANSLATE_CITIES[city].lower()}", db, schema='predict', key='all').index[-1]
+        date_forecast = view(f"forecast_{TRANSLATE_CITIES[city].lower()}", db, schema='predict', key='all').index[-1]
+        forecast_temp = view(f"forecast_{TRANSLATE_CITIES[city].lower()}", db, schema='predict', key='all').iloc[-1]
     elif forecast_source == 'yandex':
-        date_forecast = view(f"t_{TRANSLATE_CITIES[city]}_Yandex", db, schema='predict', key='all').index[-1]
+        date_forecast = view(f"t_{TRANSLATE_CITIES[city]}_Yandex", db, schema='prom', key='all').index[-1]
+        forecast_temp = view(f"t_{TRANSLATE_CITIES[city]}_Yandex", db, schema='prom', key='all').iloc[-1]
     elif forecast_source == 'gismeteo':
-        date_forecast = view(f"t_{TRANSLATE_CITIES[city]}_GisMeteo", db, schema='predict', key='all').index[-1]
+        date_forecast = view(f"t_{TRANSLATE_CITIES[city]}_GisMeteo", db, schema='prom', key='all').index[-1]
+        forecast_temp = view(f"t_{TRANSLATE_CITIES[city]}_GisMeteo", db, schema='prom', key='all').iloc[-1]
     else:
         raise KeyError("date_flag Error!")
 
@@ -55,18 +58,18 @@ def create_forecast(city, dist, period, db, forecast_source):
             if WEATHER_YANDEX_SMILE[forecast_Yandex[f'weather{i}']] == WEATHER_GISMETEO_SMILE[forecast_GisMeteo[f'weather{i}']]:
                 forecast_data += (f"\n"
                                   f"✨ {date.strftime('%Y-%m-%d')} ✨\n"
-                                  f"<b>Температура</b> ⬇️ <b>{str(forecast_Yandex[f'night{i}'])}°</b> ⬆️ <b>{str(forecast_Yandex[f'day{i}'])}°</b>\n"
+                                  f"<b>Температура</b> ⬇️ <b>{str(forecast_temp[f'night{i}'])}°</b> ⬆️ <b>{str(forecast_temp[f'day{i}'])}°</b>\n"
                                   f"🔸<b>Yandex</b> и 🔹<b>GisMeteo</b> прогнозируют {WEATHER_GISMETEO_SMILE[forecast_GisMeteo[f'weather{i}']]}\n")
             else:
                 forecast_data += (f"\n"
                                   f"✨ {date.strftime('%Y-%m-%d')} ✨\n"
-                                  f"<b>Температура</b> ⬇️ <b>{str(forecast_Yandex[f'night{i}'])}°</b> ⬆️ <b>{str(forecast_Yandex[f'day{i}'])}°</b>\n "
+                                  f"<b>Температура</b> ⬇️ <b>{str(forecast_temp[f'night{i}'])}°</b> ⬆️ <b>{str(forecast_temp[f'day{i}'])}°</b>\n "
                                   f"🔸<b>Yandex</b> прогнозирует {WEATHER_YANDEX_SMILE[forecast_Yandex[f'weather{i}']]}\n "
                                   f"🔹<b>GisMeteo</b> прогнозирует {WEATHER_GISMETEO_SMILE[forecast_GisMeteo[f'weather{i}']]}\n")
         else:
             forecast_data += (f"\n"
                               f"✨ {date.strftime('%Y-%m-%d')} ✨\n"
-                              f"<b>Температура</b> ⬇️ <b>{str(forecast_Yandex[f'night{i}'])}°</b> ⬆️ <b>{str(forecast_Yandex[f'day{i}'])}°</b>\n "
+                              f"<b>Температура</b> ⬇️ <b>{str(forecast_temp[f'night{i}'])}°</b> ⬆️ <b>{str(forecast_temp[f'day{i}'])}°</b>\n "
                               f"🔸<b>Yandex</b> прогнозирует {forecast_Yandex[f'weather{i}']}\n "
                               f"🔹<b>GisMeteo</b> прогнозирует {forecast_GisMeteo[f'weather{i}']}\n")
 

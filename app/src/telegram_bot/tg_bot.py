@@ -178,8 +178,8 @@ async def help_message(message: types.Message):
                 '▪️<i>Введи</i> <b>/weather</b> \n' \
                 ' \n' \
                 '❓ <b>Можно ли выбрать другой источник прогноза температуры?</b> \n' \
-                '▪️<i>Да, надо ввести команду</i> <b>/update (название источника)</b>' \
-                '▪️<i>В данный момент доступно 3 источника:</i> <b>Model</b>, <b>Yandex</b>, <b>GisMeteo</b>' \
+                '▪️<i>Да, надо ввести команду</i> <b>/update (название источника)</b> \n' \
+                '▪️<i>В данный момент доступно 3 источника:</i> <b>Model</b>, <b>Yandex</b>, <b>GisMeteo</b> \n' \
                 ' \n' \
                 '❓ <b>А у вас есть возможность рассылки✉️ прогноза?</b> \n' \
                 '▪️<i>Конечно! для подписки на рассылку введи</i> <b>+(Название города)</b> \n' \
@@ -255,7 +255,11 @@ async def cities_message(message: types.Message):
     try:
         source_name_new = str(args).lower()
 
-        row_new = db.execute_query(query=f'select id_source from prom.forecast_sources where source_name = {source_name_new}')
+        if not source_name_new:
+            logger.warning("Получена пустая строка")
+            raise ValueError("Получена пустая строка")
+
+        row_new = db.execute_query(query=f'''select id_source from prom.forecast_sources where source_name = '{source_name_new}' ''')
         id_source_new = row_new[0]['id_source']
 
         row_old = db.execute_query(
