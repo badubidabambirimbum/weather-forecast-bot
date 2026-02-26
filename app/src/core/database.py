@@ -59,6 +59,7 @@ class DataBase:
                 result = cursor.fetchall() # return format: [{'id': '1', 'age': '18'}, {'id': '2', 'age': '26'}] (из-за RealDictCursor)
             self.logger.info(f"Query executed successfully")
         except Exception as ex:
+            self.connection.rollback()
             self.logger.error(ex)
             raise RuntimeError(f"Execute query failed : {ex}") from ex
         return result
@@ -89,6 +90,7 @@ class DataBase:
             self.connection.commit()
             self.logger.info(f"Inserted {data} into {schema}.{table_name} successfully")
         except Exception as ex:
+            self.connection.rollback()
             self.logger.error(ex)
             raise RuntimeError(f"Insert failed : {data} into {schema}.{table_name}") from ex
 
@@ -109,6 +111,7 @@ class DataBase:
             self.connection.commit()
             self.logger.info(f"Deleted {filter} from {schema}.{table_name} successfully")
         except Exception as ex:
+            self.connection.rollback()
             self.logger.error(ex)
             raise RuntimeError(f"Delete failed : {ex}") from ex
 
@@ -134,5 +137,6 @@ class DataBase:
             self.connection.commit()
             self.logger.info(f"Updated {set_query} WHERE {filter} from {schema}.{table_name} successfully")
         except Exception as ex:
+            self.connection.rollback()
             self.logger.error(ex)
             raise RuntimeError(f"Update failed : {ex}") from ex

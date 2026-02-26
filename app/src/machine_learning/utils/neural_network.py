@@ -60,9 +60,8 @@ class NeuralNetwork:
 
         return start_date, end_date
 
-    @staticmethod
     @log_class_method
-    def get_city_coordinates(city_name: str) -> tuple[float, float]:
+    def get_city_coordinates(self, city_name: str) -> tuple[float, float]:
         '''Получаем координаты города'''
         geolocator = Nominatim(user_agent="weather_data_fetcher")
         location = geolocator.geocode(city_name)
@@ -105,9 +104,8 @@ class NeuralNetwork:
 
         return df
 
-    @staticmethod
     @log_class_method
-    def scale_snow_column(series: pd.Series) -> pd.Series:
+    def scale_snow_column(self, series: pd.Series) -> pd.Series:
         '''
         :param series: pd.Series с параметром snow
         :return: pd.Series - применяем не к 0 значениям MinMaxScaler
@@ -173,9 +171,8 @@ class NeuralNetwork:
 
         return model
 
-    @staticmethod
     @log_class_method
-    def save_history_fit(history):
+    def save_history_fit(self, history):
         '''Сохранение метрик с последнего шага обучения'''
         metrics = {'loss': 'Loss',
                    'mean_squared_error': 'MSE',
@@ -245,9 +242,8 @@ class NeuralNetwork:
 
         return result_fit
 
-    @staticmethod
     @log_class_method
-    def get_window_min_max(arr, window_size=24):
+    def get_window_min_max(self, arr, window_size=24):
         '''Формируем набор минимальных и максимальных значений по дням, так как изначально у нас все по часам'''
         # Разбить на окна и посчитать min и max в каждом
         chunks = [arr[i:i+window_size] for i in range(0, len(arr), window_size)]

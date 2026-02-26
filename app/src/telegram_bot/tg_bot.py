@@ -355,7 +355,7 @@ async def check_datasets(message: types.Message):
         text = ""
         for type in SET_TYPES:
             for city in SET_CITIES:
-                table_name = f"t_{city}_{type}"
+                table_name = f"t_{TRANSLATE_CITIES[city]}_{type}"
                 text += f"{len(lib.view(table_name, db, key='all'))} {city} {type} \n"
         await bot.send_message(chat_id=admin_id,
                                text=text)
