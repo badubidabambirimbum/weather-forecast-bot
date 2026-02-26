@@ -1,3 +1,5 @@
+from typing import Literal
+
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -20,7 +22,7 @@ CITIES_URL = {
          "Ekaterinburg": 'https://yandex.ru/weather?lat=56.8380127&lon=60.59747314'}}
 
 
-def get_weather_forecast_Yandex(city, type='Yandex', **kwargs):
+def get_weather_forecast_Yandex(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar'], type: Literal['GisMeteo', 'Yandex'], **kwargs) -> dict[str, list]:
     '''Получение данных с сайта Yandex'''
 
     city_url = CITIES_URL[type][city]
@@ -81,7 +83,7 @@ def get_weather_forecast_Yandex(city, type='Yandex', **kwargs):
     return forecast_data
 
 
-def get_weather_forecast_GisMeteo(city, type, **kwargs):
+def get_weather_forecast_GisMeteo(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar'], type: Literal['GisMeteo', 'Yandex'], **kwargs) -> dict[str, list]:
     '''Получение данных с сайта GisMeteo'''
 
     city_url = CITIES_URL[type][city]
@@ -100,8 +102,6 @@ def get_weather_forecast_GisMeteo(city, type, **kwargs):
     temp_min = soup.find_all('div', class_='mint')
     weather = soup.find_all('div', class_='row-item')
 
-    forecast_data = []
-
     max_temp = [temp_max[i].find('temperature-value')["value"] for i in range(10)]
     min_temp = [temp_min[i].find('temperature-value')["value"] for i in range(10)]
     weather_today = [weather[i]['data-tooltip'] for i in range(10)]
@@ -115,7 +115,7 @@ def get_weather_forecast_GisMeteo(city, type, **kwargs):
     return forecast_data
 
 
-def create_today(city, type, airflow_mode=False, today=datetime.now().strftime('%Y-%m-%d'), **kwargs):
+def create_today(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar'], type: Literal['GisMeteo', 'Yandex'], airflow_mode=False, today=datetime.now().strftime('%Y-%m-%d'), **kwargs) -> pd.DataFrame:
     '''Создание таблицы из одной строки с подгруженными данными'''
 
     if airflow_mode:
@@ -150,7 +150,7 @@ def create_today(city, type, airflow_mode=False, today=datetime.now().strftime('
 
     return df
 
-def create_new_day(city:str, type:str, year:int, month:int, day:int, list_days:list, list_nights:list, list_weathers:list, db: DataBase, schema='prom'):
+def create_new_day(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar'], type: Literal['GisMeteo', 'Yandex'], year: int, month: int, day: int, list_days: list, list_nights: list, list_weathers: list, db: DataBase, schema='prom') -> None:
     '''Ручное добавление одного дня по указанному городу и сайту'''
 
     date = datetime(year, month, day)
@@ -182,7 +182,7 @@ def create_new_day(city:str, type:str, year:int, month:int, day:int, list_days:l
         db.insert(schema=schema, table_name=table_name, columns_list=columns_weather_list, data=row)
 
 
-def update_table(city, type, db=None, airflow_mode=False, **kwargs):
+def update_table(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar'], type: Literal['GisMeteo', 'Yandex'], db=None, airflow_mode=False, **kwargs) -> None:
     '''Обновление таблицы по указанному городу и сайту'''
 
     city = city.lower()

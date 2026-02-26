@@ -5,7 +5,7 @@ import pandas as pd
 from datetime import datetime
 from core.database import DataBase
 
-def load_metrics(city, airflow_mode=True, db=None, **kwargs):
+def load_metrics(city: str, airflow_mode=True, db=None, **kwargs) -> None:
     '''Загрузка полученных метрик с последнего шага обучения в БД'''
 
     if airflow_mode:
@@ -39,7 +39,7 @@ def load_metrics(city, airflow_mode=True, db=None, **kwargs):
         raise ValueError(f"{city} load metrics ERROR!\n{e}")
 
 
-def load_forecast(city, airflow_mode=True, db=None, **kwargs):
+def load_forecast(city: str, airflow_mode=True, db=None, **kwargs) -> None:
     '''Загружаем прогноз в БД'''
 
     if airflow_mode:

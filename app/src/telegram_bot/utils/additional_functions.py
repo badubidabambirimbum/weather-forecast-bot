@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Literal
 
 import pandas as pd
 from collections import deque
@@ -30,7 +30,7 @@ def view(table_name: str, db: DataBase, schema='prom', key="tail", OrderBy_colum
         raise KeyError("key Error!")
 
 
-def create_forecast(city, dist, period, db, forecast_source):
+def create_forecast(city: Literal['Moscow', 'Ekaterinburg', 'Krasnodar'], dist: int, period: int, db: DataBase, forecast_source: Literal['model', 'yandex', 'gismeteo']) -> str:
     '''формирование строки с прогнозом'''
 
     forecast_Yandex = view(f"t_{TRANSLATE_CITIES[city]}_Yandex", db, key='all').iloc[-1]
@@ -75,7 +75,7 @@ def create_forecast(city, dist, period, db, forecast_source):
 
     return forecast_data
 
-def backup(db, tables=('prom.t_moscow_gismeteo',
+def backup(db: DataBase, tables=('prom.t_moscow_gismeteo',
                        'prom.t_moscow_yandex',
                        'prom.t_ekaterinburg_gismeteo',
                        'prom.t_ekaterinburg_yandex',
@@ -99,7 +99,7 @@ def backup(db, tables=('prom.t_moscow_gismeteo',
     except Exception as e:
         raise ValueError(e)
 
-def get_tail_file(filepath, n=100) -> List:
+def get_tail_file(filepath: str, n=100) -> List:
     '''
     Функция для получения n последних строк файла
     :param filepath: путь к файлу

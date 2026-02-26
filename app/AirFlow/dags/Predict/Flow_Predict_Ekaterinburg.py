@@ -22,6 +22,9 @@ timezone_city = 'Asia/Yekaterinburg'
 local_tz = timezone("Europe/Moscow")
 schedule = Variable.get(f"schedule_Predict_{city}")
 
+n_timesteps=15*24
+n_forecast=10*24
+
 
 default_args = {
     'owner': '@CHAO',                                   # Указывает владельца задачи
@@ -42,7 +45,10 @@ dag = DAG(
     is_paused_upon_creation=True,
     tags=['Predict', city],
     params={'city': city,
-            'timezone': timezone_city}
+            'timezone': timezone_city,
+            'n_timesteps': n_timesteps,
+            'n_forecast': n_forecast
+            }
 )
 
 
@@ -60,7 +66,13 @@ start = DummyOperator(task_id='start')
 get_predict = DockerOperator(
     task_id="get_predict",
     image="ml_fit_model:latest",
-    command="python predict_model.py --city {{ params.city }} --timezone {{ params.timezone }} --airflow_mode",
+    command="""python predict_model.py \
+--city {{ params.city }} \
+--timezone {{ params.timezone }} \
+--airflow_mode \
+--n_timesteps {{ params.n_timesteps }} \
+--n_forecast {{ params.n_forecast }}
+        """,
     dag=dag,
     docker_url="unix://var/run/docker.sock",
     mounts=[

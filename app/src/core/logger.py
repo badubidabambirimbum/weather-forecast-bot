@@ -3,8 +3,9 @@ import logging.handlers
 import os
 import sys
 from datetime import datetime
+import functools
 
-def create_logger(log_dir='logs', log_level=logging.DEBUG):
+def create_logger(log_dir='logs', log_level=logging.DEBUG) -> tuple[logging.Logger, str]:
     """
     Инициализация логгера.
 
@@ -50,3 +51,30 @@ def create_logger(log_dir='logs', log_level=logging.DEBUG):
         logger.addHandler(out_handler)
 
     return logger, log_filename
+
+def log_function(logger):
+    """Декоратор для логирования выполнения функций"""
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            logger.info(f"_started '{func.__name__}'")
+            try:
+                result = await func(*args, **kwargs)
+                logger.info(f"_stopped '{func.__name__}'")
+                return result
+            except Exception as e:
+                logger.error(f"_failed '{func.__name__}' {e}")
+        return wrapper
+    return decorator
+
+def log_class_method(func):
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        self.logger.info(f"_started '{func.__name__}'")
+        try:
+            result = func(*args, **kwargs)
+            self.logger.info(f"_stopped '{func.__name__}'")
+            return result
+        except Exception as e:
+            self.logger.error(f"_failed '{func.__name__}' {e}")
+    return wrapper

@@ -21,6 +21,11 @@ timezone_city = 'Asia/Yekaterinburg'
 local_tz = timezone("Europe/Moscow")
 schedule = Variable.get(f"schedule_Model_{city}")
 
+n_timesteps=15*24
+n_forecast=10*24
+num_epochs=8
+batch_size=32
+
 
 default_args = {
     'owner': '@CHAO',                                   # Указывает владельца задачи
@@ -41,7 +46,12 @@ dag = DAG(
     is_paused_upon_creation=True,
     tags=['Model', city],
     params={'city': city,
-            'timezone': timezone_city}
+            'timezone': timezone_city,
+            'n_timesteps' : n_timesteps,
+            'n_forecast' : n_forecast,
+            'num_epochs' : num_epochs,
+            'batch_size' : batch_size
+            }
 )
 
 
@@ -50,7 +60,15 @@ start = DummyOperator(task_id='start')
 fit_model = DockerOperator(
     task_id="fit_model",
     image="ml_fit_model:latest",
-    command="python fit_model.py --city {{ params.city }} --timezone {{ params.timezone }} --airflow_mode",
+    command="""python fit_model.py \
+--city {{ params.city }} \
+--timezone {{ params.timezone }} \
+--airflow_mode \
+--n_timesteps {{ params.n_timesteps }} \
+--n_forecast {{ params.n_forecast }} \
+--num_epochs {{ params.num_epochs }} \
+--batch_size {{ params.batch_size }}
+    """,
     dag=dag,
     docker_url="unix://var/run/docker.sock",
     mounts=[
