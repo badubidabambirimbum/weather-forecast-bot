@@ -72,7 +72,7 @@ def log_class_method(func):
     def wrapper(self, *args, **kwargs):
         self.logger.info(f"_started '{func.__name__}'")
         try:
-            result = func(*args, **kwargs)
+            result = func(self, *args, **kwargs)
             self.logger.info(f"_stopped '{func.__name__}'")
             return result
         except Exception as e:
