@@ -6,7 +6,6 @@ venv
 .vscode
 .DS_Store
 .conda
-output.log
 logs
 psql
 secret
