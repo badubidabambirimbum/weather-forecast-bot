@@ -21,6 +21,7 @@ city = 'Moscow'
 timezone_city = 'Europe/Moscow'
 local_tz = timezone("Europe/Moscow")
 schedule = Variable.get(f"schedule_Model_{city}")
+host_root_dir = os.getenv("PROJECT_ROOT")
 
 n_timesteps=15*24
 n_forecast=10*24
@@ -60,7 +61,7 @@ start = DummyOperator(task_id='start')
 
 fit_model = DockerOperator(
     task_id="fit_model",
-    image="ml_fit_model:latest",
+    image="weather-forecast-bot-ml-worker:latest",
     command="""python fit_model.py \
 --city {{ params.city }} \
 --timezone {{ params.timezone }} \
@@ -74,7 +75,7 @@ fit_model = DockerOperator(
     docker_url="unix://var/run/docker.sock",
     mounts=[
         Mount(
-            source="/Users/alexey/PycharmProjects/weather-forecast-bot/models",     # путь на хосте
+            source=f"{host_root_dir}\models",                                       # путь на хосте
             target="/app/models",                                                   # путь в контейнере
             type="bind"
         )
