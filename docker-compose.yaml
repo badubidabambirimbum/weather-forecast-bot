@@ -18,6 +18,7 @@ x-airflow-common:
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+    PROJECT_ROOT: ${PWD}
   volumes:
     - ./app/AirFlow/dags:/opt/airflow/dags
     - ./app/AirFlow/logs:/opt/airflow/logs
@@ -41,6 +42,7 @@ services:                                                   # Раздел, в �
     container_name: telegram_bot                            # Явное имя контейнера. Без этого Docker сгенерировал бы имя автоматически.
     volumes:                                                # Позволяет контейнеру читать/изменять файлы на хосте.
       - ./app/secret:/app/secret
+      - ./logs:/app/src/telegram_bot/logs
     networks:                                               # Подключает контейнер к сети telegram_bot_network, чтобы он мог общаться с другими контейнерами в этой сети.
       - telegram_bot_network
     restart: unless-stopped
@@ -107,7 +109,7 @@ services:                                                   # Раздел, в �
   airflow-cli:
     <<: *airflow-common
     profiles:
-      - debug
+      - init
     environment:
       <<: *airflow-common-env
       CONNECTION_CHECK_MAX_COUNT: "0"
@@ -118,11 +120,12 @@ services:                                                   # Раздел, в �
       --conn-uri 'postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}'
       "
 
-#  ml-worker:
-#    build:
-#      context: .
-#      dockerfile: DockerBuild/MachineLearning/Dockerfile.ml
-#    image: ml_fit_model:latest
+  ml-worker:
+    profiles:
+      - worker_ml_model
+    build:
+      context: .
+      dockerfile: DockerBuild/MachineLearning/Dockerfile.ml
 
 networks:
   telegram_bot_network:
