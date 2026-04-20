@@ -12,9 +12,6 @@ import os
 from dotenv import load_dotenv
 from io import BytesIO
 
-# sys.path.append('/app/src/telegram_bot/utils')
-# sys.path.append('/app/src/core')
-
 import telegram_bot.utils.additional_functions as lib
 from telegram_bot.utils.telegram_constants import WEATHER_YANDEX_SMILE, WEATHER_GISMETEO_SMILE, WEATHER_GISMETEO_EXCEPTIONS, SET_CITIES, SET_TYPES, TRANSLATE_CITIES
 from telegram_bot.utils.Keyboards import kb, kb_help, kb_cities, ikb_info
